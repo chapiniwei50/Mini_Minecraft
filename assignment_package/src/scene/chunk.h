@@ -53,6 +53,7 @@ private:
 
 public:
     Chunk();
+    Chunk(int x, int z);
     BlockType getBlockAt(unsigned int x, unsigned int y, unsigned int z) const;
     BlockType getBlockAt(int x, int y, int z) const;
     void setBlockAt(unsigned int x, unsigned int y, unsigned int z, BlockType t);

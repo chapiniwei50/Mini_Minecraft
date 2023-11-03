@@ -192,11 +192,17 @@ void Terrain::CreateTestScene()
     // TODO: DELETE THIS LINE WHEN YOU DELETE m_geomCube!
     m_geomCube.createVBOdata();
 
+    //Current boundary for testing (will be changed after milestone2)
+    int m_minX = -128;
+    int m_maxX = 128;
+    int m_minZ = -128;
+    int m_maxZ = 128;
+
     // Create the Chunks that will
     // store the blocks for our
     // initial world space
-    for(int x = 0; x < 64; x += 16) {
-        for(int z = 0; z < 64; z += 16) {
+    for(int x = m_minX; x < m_maxX; x += 16) {
+        for(int z = m_minZ; z < m_maxZ; z += 16) {
             instantiateChunkAt(x, z);
         }
     }
@@ -205,26 +211,67 @@ void Terrain::CreateTestScene()
     // now exists.
     m_generatedTerrain.insert(toKey(0, 0));
 
-    // Create the basic terrain floor
-    for(int x = 0; x < 64; ++x) {
-        for(int z = 0; z < 64; ++z) {
-            if((x + z) % 2 == 0) {
-                setBlockAt(x, 128, z, STONE);
-            }
-            else {
-                setBlockAt(x, 128, z, DIRT);
+    //Noise terrain
+    const float terrainScale = 0.1f; // Smaller values will make the terrain smoother
+    const int heightMultiplier = 5;  // Adjust this for higher or lower terrain
+    const int baseHeight = 128;       // Base height for the terrain
+
+    for(int x = m_minX; x < m_maxX; ++x) {
+        for(int z = m_minZ; z < m_maxZ; ++z) {
+            float height = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
+            height += baseHeight;
+            int intHeight = static_cast<int>(round(height));
+            intHeight = intHeight > 255 ? 255 : intHeight;
+            for(int y = 0; y <= intHeight; ++y) {
+                BlockType blockType = (y == intHeight) ? GRASS : DIRT;
+                setBlockAt(x, y, z, blockType);
             }
         }
     }
-    // Add "walls" for collision testing
-    for(int x = 0; x < 64; ++x) {
-        setBlockAt(x, 129, 0, GRASS);
-        setBlockAt(x, 130, 0, GRASS);
-        setBlockAt(x, 129, 63, GRASS);
-        setBlockAt(0, 130, x, GRASS);
+
+}
+
+glm::vec2 random2(glm::vec2 p) {
+    return glm::fract(glm::sin(glm::vec2(glm::dot(p, glm::vec2(127.1, 311.7)),
+                                         glm::dot(p, glm::vec2(269.5,183.3))))
+                      * 43758.5453f);
+}
+
+float surflet(glm::vec2 P, glm::vec2 gridPoint) {
+    float distX = glm::abs(P.x - gridPoint.x);
+    float distY = glm::abs(P.y - gridPoint.y);
+    float tX = 1.f - 6.f * glm::pow(distX, 5.f) + 15.f * glm::pow(distX, 4.f) - 10.f * glm::pow(distX, 3.f);
+    float tY = 1.f - 6.f * glm::pow(distY, 5.f) + 15.f * glm::pow(distY, 4.f) - 10.f * glm::pow(distY, 3.f);
+    glm::vec2 gradient = 2.f * random2(gridPoint) - glm::vec2(1.f);
+    glm::vec2 diff = P - gridPoint;
+    float height = glm::dot(diff, gradient);
+    return height * tX * tY;
+}
+
+float Terrain::perlinNoiseSingle(glm::vec2 uv) {
+    float surfletSum = 0.f;
+    for(int dx = 0; dx <= 1; ++dx) {
+        for(int dy = 0; dy <= 1; ++dy) {
+            surfletSum += surflet(uv, glm::vec2((int)uv.x + dx, (int)uv.y + dy));
+        }
     }
-    // Add a central column
-    for(int y = 129; y < 140; ++y) {
-        setBlockAt(32, y, 32, GRASS);
+    return surfletSum;
+}
+
+float Terrain::PerlinNoise(float x, float z, float frequency, int octaves) {
+    float amplitude = 1.0f;
+    float maxAmplitude = 0.0f;
+    float noise = 0.0f;
+    glm::vec2 uv(x, z);
+
+    for(int i = 0; i < octaves; i++) {
+        noise += perlinNoiseSingle(uv * frequency) * amplitude;
+        maxAmplitude += amplitude;
+        amplitude *= 0.5f;
+        frequency *= 2.0f;
     }
+
+    noise /= maxAmplitude;
+
+    return noise;
 }
