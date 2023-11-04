@@ -54,6 +54,9 @@ private:
 
     OpenGLContext* mp_context;
 
+    float PerlinNoise(float x, float z, float frequency, int octaves);
+    float perlinNoiseSingle(glm::vec2 uv);
+
 public:
     Terrain(OpenGLContext *context);
     ~Terrain();
