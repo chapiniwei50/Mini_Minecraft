@@ -117,7 +117,7 @@ void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 Chunk* Terrain::instantiateChunkAt(int x, int z) {
     uPtr<Chunk> chunk = mkU<Chunk>(x, z);
     Chunk *cPtr = chunk.get();
-    m_chunks[toKey(x, z)] = move(chunk);
+    m_chunks[toKey(x, z)] = std::move(chunk);
     // Set the neighbor pointers of itself and its neighbors
     if(hasChunkAt(x, z + 16)) {
         auto &chunkNorth = m_chunks[toKey(x, z + 16)];
@@ -187,16 +187,17 @@ void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shader
     shaderProgram->drawInstanced(m_geomCube);
 }
 
+
 void Terrain::CreateTestScene()
 {
     // TODO: DELETE THIS LINE WHEN YOU DELETE m_geomCube!
     m_geomCube.createVBOdata();
 
     //Current boundary for testing (will be changed after milestone2)
-    int m_minX = -128;
-    int m_maxX = 128;
-    int m_minZ = -128;
-    int m_maxZ = 128;
+    int m_minX = 0;
+    int m_maxX = 64;
+    int m_minZ = 0;
+    int m_maxZ = 64;
 
     // Create the Chunks that will
     // store the blocks for our
@@ -211,19 +212,11 @@ void Terrain::CreateTestScene()
     // now exists.
     m_generatedTerrain.insert(toKey(0, 0));
 
-    //Noise terrain
-    const float terrainScale = 0.1f; // Smaller values will make the terrain smoother
-    const int heightMultiplier = 5;  // Adjust this for higher or lower terrain
-    const int baseHeight = 128;       // Base height for the terrain
-
     for(int x = m_minX; x < m_maxX; ++x) {
         for(int z = m_minZ; z < m_maxZ; ++z) {
-            float height = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
-            height += baseHeight;
-            int intHeight = static_cast<int>(round(height));
-            intHeight = intHeight > 255 ? 255 : intHeight;
-            for(int y = 0; y <= intHeight; ++y) {
-                BlockType blockType = (y == intHeight) ? GRASS : DIRT;
+            int height = getHeight(x,z);
+            for(int y = 0; y <= height; ++y) {
+                BlockType blockType = (y == height) ? GRASS : DIRT;
                 setBlockAt(x, y, z, blockType);
             }
         }
@@ -275,3 +268,34 @@ float Terrain::PerlinNoise(float x, float z, float frequency, int octaves) {
 
     return noise;
 }
+
+int Terrain::getHeight(int x, int z) {
+    // Noise settings for biome determination and height variation.
+    const float biomeScale = 0.005f; // Larger scale for biome determination.
+    const float terrainScale = 0.1f; // Terrain variation scale.
+    const int baseHeight = 128;      // Base height for the terrain.
+
+    float biomeNoiseValue = PerlinNoise(x * biomeScale, z * biomeScale, 1.0f, 2);
+
+    float height = baseHeight;
+
+    if (biomeNoiseValue <= 0.4) { // Plains
+        height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 20;
+    } else if (biomeNoiseValue >= 0.5 && biomeNoiseValue <= 0.7) { // Desert
+        height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
+    } else if (biomeNoiseValue > 0.7) { // Mountains
+        height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
+    } else {
+        float plainsHeight = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 20;
+        float desertHeight = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
+        float lerpWeight = (biomeNoiseValue - 0.4f) * 10.0f; // This maps the range [0.4, 0.5] to [0.0, 1.0].
+        height += plainsHeight * (1.0f - lerpWeight) + desertHeight * lerpWeight;
+    }
+
+    int intHeight = static_cast<int>(round(height));
+    intHeight = std::min(255, std::max(0, intHeight));
+
+    return intHeight;
+}
+
+

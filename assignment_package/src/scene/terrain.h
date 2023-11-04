@@ -56,6 +56,7 @@ private:
 
     float PerlinNoise(float x, float z, float frequency, int octaves);
     float perlinNoiseSingle(glm::vec2 uv);
+    int getHeight(int x, int z);
 
 public:
     Terrain(OpenGLContext *context);
