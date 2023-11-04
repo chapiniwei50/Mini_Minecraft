@@ -187,7 +187,6 @@ void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shader
     shaderProgram->drawInstanced(m_geomCube);
 }
 
-
 void Terrain::CreateTestScene()
 {
     // TODO: DELETE THIS LINE WHEN YOU DELETE m_geomCube!
@@ -214,10 +213,42 @@ void Terrain::CreateTestScene()
 
     for(int x = m_minX; x < m_maxX; ++x) {
         for(int z = m_minZ; z < m_maxZ; ++z) {
-            int height = getHeight(x,z);
-            for(int y = 0; y <= height; ++y) {
-                BlockType blockType = (y == height) ? GRASS : DIRT;
-                setBlockAt(x, y, z, blockType);
+            BiomeType biome;
+            int height;
+            getHeight(x,z,height,biome);
+
+            // Fill base with STONE
+            for (int y = 0; y <= 128; ++y) {
+                setBlockAt(x, y, z, STONE);
+            }
+
+            // Based on biome, fill above y = 128
+            for (int y = 129; y <= height; ++y) {
+                if (y == height) {
+                    // Top block determination
+                    if (biome == BiomeType::PLAIN) {
+                        setBlockAt(x, y, z, GRASS);
+                    } else if (biome == BiomeType::MOUNTAIN) {
+                        setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
+                    }
+                } else {
+                    // Filling other blocks
+                    if (biome == BiomeType::PLAIN) {
+                        setBlockAt(x, y, z, DIRT);
+                    } else if (biome == BiomeType::MOUNTAIN) {
+                        setBlockAt(x, y, z, STONE);
+                    }
+                }
+            }
+
+            // Fill WATER if there's empty space between 128 and 138
+            for (int y = 129; y < 138; ++y) {
+                if (getBlockAt(x, y, z) == EMPTY) {
+                    setBlockAt(x, y, z, WATER);
+                }
+                else if(getBlockAt(x, y, z) == GRASS) {
+                    setBlockAt(x, y, z, DIRT);
+                }
             }
         }
     }
@@ -269,33 +300,38 @@ float Terrain::PerlinNoise(float x, float z, float frequency, int octaves) {
     return noise;
 }
 
-int Terrain::getHeight(int x, int z) {
-    // Noise settings for biome determination and height variation.
-    const float biomeScale = 0.005f; // Larger scale for biome determination.
-    const float terrainScale = 0.1f; // Terrain variation scale.
-    const int baseHeight = 128;      // Base height for the terrain.
+float Terrain::WorleyNoise(glm::vec2 uv){
 
-    float biomeNoiseValue = PerlinNoise(x * biomeScale, z * biomeScale, 1.0f, 2);
+}
+
+void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
+    // Noise settings for biome determination and height variation.
+    const float biomeScale = 0.05f; // Larger scale for biome determination.
+    const float terrainScale = 0.1f; // Terrain variation scale.
+    const int baseHeight = 135;      // Base height for the terrain.
+
+    float biomeNoiseValue = PerlinNoise(x * biomeScale, z * biomeScale, 1.0f, 2) * 5;
 
     float height = baseHeight;
 
+    // Determine the biome based on the biomeNoiseValue
     if (biomeNoiseValue <= 0.4) { // Plains
-        height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 20;
+        height += PerlinNoise(x * 0.05f, z * 0.05f, 1.0f, 4) * 20 + 2;
+        b = BiomeType::PLAIN;
     } else if (biomeNoiseValue >= 0.5 && biomeNoiseValue <= 0.7) { // Desert
         height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
+        b = BiomeType::DESSERT;
     } else if (biomeNoiseValue > 0.7) { // Mountains
         height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
-    } else {
+        b = BiomeType::MOUNTAIN;
+    } else { // Transition between Plains and Desert
         float plainsHeight = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 20;
         float desertHeight = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
-        float lerpWeight = (biomeNoiseValue - 0.4f) * 10.0f; // This maps the range [0.4, 0.5] to [0.0, 1.0].
+        float lerpWeight = (biomeNoiseValue - 0.4f) * 10.0f; // This maps [0.4, 0.5] -> [0.0, 1.0].
         height += plainsHeight * (1.0f - lerpWeight) + desertHeight * lerpWeight;
+        // Determine the dominant biome in the transition for BiomeType.
+        b = lerpWeight < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
     }
-
-    int intHeight = static_cast<int>(round(height));
-    intHeight = std::min(255, std::max(0, intHeight));
-
-    return intHeight;
+    y = static_cast<int>(round(height));
+    y = std::min(255, std::max(0, y));
 }
-
-
