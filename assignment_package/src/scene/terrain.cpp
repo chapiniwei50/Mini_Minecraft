@@ -54,6 +54,7 @@ BlockType Terrain::getBlockAt(int x, int y, int z) const
             return EMPTY;
         }
         const uPtr<Chunk> &c = getChunkAt(x, z);
+
         glm::vec2 chunkOrigin = glm::vec2(floor(x / 16.f) * 16, floor(z / 16.f) * 16);
         return c->getBlockAt(static_cast<unsigned int>(x - chunkOrigin.x),
                              static_cast<unsigned int>(y),
@@ -230,6 +231,8 @@ void Terrain::CreateTestScene()
                         setBlockAt(x, y, z, GRASS);
                     } else if (biome == BiomeType::MOUNTAIN) {
                         setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
+                    } else if (biome == BiomeType::DESSERT){
+                        setBlockAt(x, y, z, STONE);
                     }
                 } else {
                     // Filling other blocks
@@ -237,6 +240,8 @@ void Terrain::CreateTestScene()
                         setBlockAt(x, y, z, DIRT);
                     } else if (biome == BiomeType::MOUNTAIN) {
                         setBlockAt(x, y, z, STONE);
+                    } else if (biome == BiomeType::DESSERT){
+                        setBlockAt(x, y, z, DIRT);
                     }
                 }
             }
@@ -300,32 +305,29 @@ float Terrain::PerlinNoise(float x, float z, float frequency, int octaves) {
     return noise;
 }
 
-float Terrain::WorleyNoise(glm::vec2 uv){
-
-}
-
 void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     // Noise settings for biome determination and height variation.
     const float biomeScale = 0.05f; // Larger scale for biome determination.
     const float terrainScale = 0.1f; // Terrain variation scale.
     const int baseHeight = 135;      // Base height for the terrain.
 
-    float biomeNoiseValue = PerlinNoise(x * biomeScale, z * biomeScale, 1.0f, 2) * 5;
+    float biomeNoiseValue = PerlinNoise(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.5 + 0.5;
 
     float height = baseHeight;
 
     // Determine the biome based on the biomeNoiseValue
-    if (biomeNoiseValue <= 0.4) { // Plains
-        height += PerlinNoise(x * 0.05f, z * 0.05f, 1.0f, 4) * 20 + 2;
+    if (biomeNoiseValue <= 0.3) { // Plains, now using Worley noise
+        // WorleyNoise returns a value between 0 and 1, you can scale it similarly to how Perlin noise was scaled
+        height += WorleyNoise(x * terrainScale * 0.1f, z * terrainScale * 0.1f) * 2 + 15;
         b = BiomeType::PLAIN;
-    } else if (biomeNoiseValue >= 0.5 && biomeNoiseValue <= 0.7) { // Desert
+    } else if (biomeNoiseValue >= 0.4 && biomeNoiseValue <= 0.7) { // Desert
         height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
         b = BiomeType::DESSERT;
     } else if (biomeNoiseValue > 0.7) { // Mountains
         height += PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
         b = BiomeType::MOUNTAIN;
     } else { // Transition between Plains and Desert
-        float plainsHeight = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 20;
+        float plainsHeight = WorleyNoise(x * terrainScale, z * terrainScale) * 2 + 15; // Adjust the scale factor (20) if needed
         float desertHeight = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
         float lerpWeight = (biomeNoiseValue - 0.4f) * 10.0f; // This maps [0.4, 0.5] -> [0.0, 1.0].
         height += plainsHeight * (1.0f - lerpWeight) + desertHeight * lerpWeight;
@@ -334,4 +336,40 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     }
     y = static_cast<int>(round(height));
     y = std::min(255, std::max(0, y));
+}
+
+
+glm::vec2 fract(glm::vec2 v) {
+    return glm::vec2(v.x - std::floor(v.x), v.y - std::floor(v.y));
+}
+
+glm::vec2 floor(glm::vec2 v) {
+    return glm::vec2(std::floor(v.x), std::floor(v.y));
+}
+
+float length(glm::vec2 v) {
+    return std::sqrt(v.x * v.x + v.y * v.y);
+}
+
+float min(float a, float b) {
+    return (a < b) ? a : b;
+}
+
+float Terrain::WorleyNoise(float x, float y) {
+    glm::vec2 uv(x * 10.0f, y * 10.0f);
+    glm::vec2 uvInt = floor(uv);
+    glm::vec2 uvFract = fract(uv);
+    float minDist = 1.0f;
+
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            glm::vec2 neighbor(x, y);
+            glm::vec2 point = random2(uvInt + neighbor);
+            glm::vec2 diff = neighbor + point - uvFract;
+            float dist = length(diff);
+            minDist = min(minDist, dist);
+        }
+    }
+
+    return minDist;
 }

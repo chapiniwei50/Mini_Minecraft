@@ -63,7 +63,7 @@ private:
 
     float PerlinNoise(float x, float z, float frequency, int octaves);
     float perlinNoiseSingle(glm::vec2 uv);
-    float WorleyNoise(glm::vec2 uv);
+    float WorleyNoise(float x, float y);
     void getHeight(int x, int z, int& y, BiomeType& b);
 
 public:
