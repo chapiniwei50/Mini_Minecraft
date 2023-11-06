@@ -5,6 +5,7 @@
 #include <array>
 #include <unordered_map>
 #include <unordered_set>
+#include <cmath>
 #include "shaderprogram.h"
 #include "cube.h"
 
@@ -61,7 +62,8 @@ private:
 
     OpenGLContext* mp_context;
 
-    float PerlinNoise(float x, float z, float frequency, int octaves);
+    float PerlinNoise2D(float x, float z, float frequency, int octaves);
+    float PerlinNoise3D(glm::vec3 p);
     float perlinNoiseSingle(glm::vec2 uv);
     float WorleyNoise(float x, float y);
     void getHeight(int x, int z, int& y, BiomeType& b);
