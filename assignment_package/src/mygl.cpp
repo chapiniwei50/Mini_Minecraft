@@ -120,6 +120,10 @@ void MyGL::paintGL() {
     m_progLambert.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     m_progInstanced.setViewProjMatrix(m_player.mcr_camera.getViewProj());
 
+    // check whether the player is at the edge of the terrain
+    // if true, add new chunks
+    m_terrain.check_edge(m_player.mcr_position.x, m_player.mcr_position.z);
+
     renderTerrain();
 
     glDisable(GL_DEPTH_TEST);
@@ -133,7 +137,7 @@ void MyGL::paintGL() {
 // terrain that surround the player (refer to Terrain::m_generatedTerrain
 // for more info)
 void MyGL::renderTerrain() {
-    m_terrain.draw(0, 64, 0, 64, &m_progInstanced);
+    m_terrain.draw(-256, 256, -256, 256, &m_progFlat);
 }
 
 
