@@ -48,6 +48,9 @@ public:
     // Utility function that prints any shader linking errors to the console
     void printLinkInfoLog(int prog);
 
+    // Draw objects using interleaved buffer
+    void drawInterleaved(Drawable *d);
+
     QString qTextFileRead(const char*);
 
 private:
