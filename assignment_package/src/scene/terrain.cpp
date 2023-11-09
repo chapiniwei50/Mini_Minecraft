@@ -288,7 +288,6 @@ float Terrain::PerlinNoise2D(float x, float z, float frequency, int octaves) {
     return noise;
 }
 
-<<<<<<< HEAD
 void Terrain::check_edge(float x_f, float z_f)
 {
     // check whether the player is at the edge of the terrain
@@ -313,7 +312,7 @@ void Terrain::check_edge(float x_f, float z_f)
 
             for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
                 for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-                    float height = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
+                    float height = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
                     height += baseHeight;
                     int intHeight = static_cast<int>(round(height));
                     intHeight = intHeight > 255 ? 255 : intHeight;
@@ -338,7 +337,7 @@ void Terrain::check_edge(float x_f, float z_f)
 
             for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
                 for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-                    float height = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
+                    float height = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
                     height += baseHeight;
                     int intHeight = static_cast<int>(round(height));
                     intHeight = intHeight > 255 ? 255 : intHeight;
@@ -360,7 +359,6 @@ void Terrain::check_edge(float x_f, float z_f)
 }
 
 
-=======
 void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     // Noise settings for biome determination and height variation.
     const float biomeScale = 0.05f; // Larger scale for biome determination.
@@ -458,4 +456,3 @@ float Terrain::PerlinNoise3D(glm::vec3 p) {
     }
     return surfletSum;
 }
->>>>>>> 358d8f2a642064e8c1a32502fc48663f589ffb7c

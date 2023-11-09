@@ -4,13 +4,15 @@
 #include <iostream>
 #include <QApplication>
 #include <QKeyEvent>
+#include <qdatetime.h>
+
 
 
 MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
-      m_worldAxes(this),
-      m_progLambert(this), m_progFlat(this), m_progInstanced(this),
-      m_terrain(this), m_player(glm::vec3(48.f, 129.f, 48.f), m_terrain)
+    m_worldAxes(this),
+    m_progLambert(this), m_progFlat(this), m_progInstanced(this),
+    m_terrain(this), m_player(glm::vec3(48.f, 129.f, 48.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch())
 {
     // Connect the timer to a function so that when the timer ticks the function is executed
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(tick()));
@@ -71,6 +73,7 @@ void MyGL::initializeGL()
     glBindVertexArray(vao);
 
     m_terrain.CreateTestScene();
+    lastMousePosition = QPoint(0, 0);
 }
 
 void MyGL::resizeGL(int w, int h) {
@@ -93,8 +96,20 @@ void MyGL::resizeGL(int w, int h) {
 // all per-frame actions here, such as performing physics updates on all
 // entities in the scene.
 void MyGL::tick() {
+
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    float deltaT = (currentTime - m_lastTime);
+    std::cout<<"current time"<<currentTime<<std::endl;
+
+    std::cout<<"my last time"<<m_lastTime<<std::endl;
+    std::cout<<"delta time"<<deltaT<<std::endl;
+    m_lastTime = currentTime;
+    m_player.tick(deltaT, m_inputs);
+
+
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
     sendPlayerDataToGUI(); // Updates the info in the secondary window displaying player data
+
 }
 
 void MyGL::sendPlayerDataToGUI() const {
@@ -120,10 +135,6 @@ void MyGL::paintGL() {
     m_progLambert.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     m_progInstanced.setViewProjMatrix(m_player.mcr_camera.getViewProj());
 
-    // check whether the player is at the edge of the terrain
-    // if true, add new chunks
-    m_terrain.check_edge(m_player.mcr_position.x, m_player.mcr_position.z);
-
     renderTerrain();
 
     glDisable(GL_DEPTH_TEST);
@@ -137,7 +148,7 @@ void MyGL::paintGL() {
 // terrain that surround the player (refer to Terrain::m_generatedTerrain
 // for more info)
 void MyGL::renderTerrain() {
-    m_terrain.draw(-256, 256, -256, 256, &m_progFlat);
+    m_terrain.draw(0, 64, 0, 64, &m_progInstanced);
 }
 
 
@@ -153,33 +164,76 @@ void MyGL::keyPressEvent(QKeyEvent *e) {
     // chain of if statements instead
     if (e->key() == Qt::Key_Escape) {
         QApplication::quit();
-    } else if (e->key() == Qt::Key_Right) {
-        m_player.rotateOnUpGlobal(-amount);
-    } else if (e->key() == Qt::Key_Left) {
-        m_player.rotateOnUpGlobal(amount);
-    } else if (e->key() == Qt::Key_Up) {
-        m_player.rotateOnRightLocal(-amount);
-    } else if (e->key() == Qt::Key_Down) {
-        m_player.rotateOnRightLocal(amount);
     } else if (e->key() == Qt::Key_W) {
-        m_player.moveForwardLocal(amount);
+        m_inputs.wPressed = true;
     } else if (e->key() == Qt::Key_S) {
-        m_player.moveForwardLocal(-amount);
+        m_inputs.sPressed = true;
     } else if (e->key() == Qt::Key_D) {
-        m_player.moveRightLocal(amount);
+        m_inputs.dPressed = true;
     } else if (e->key() == Qt::Key_A) {
-        m_player.moveRightLocal(-amount);
-    } else if (e->key() == Qt::Key_Q) {
-        m_player.moveUpGlobal(-amount);
-    } else if (e->key() == Qt::Key_E) {
-        m_player.moveUpGlobal(amount);
+        m_inputs.aPressed = true;
+    } else if (e->key() == Qt::Key_F) {
+        if( m_inputs.flight_mode){
+            m_inputs.flight_mode = false;
+            std::cout <<"flight mode off"<< std::endl;
+        }
+        else{
+            m_inputs.flight_mode = true;
+            std::cout <<"flight mode on"<< std::endl;
+
+        }
+
+    }
+    //flight mode
+    if (m_inputs.flight_mode) {
+        if (e->key() == Qt::Key_Q) {
+            m_inputs.qPressed = true;
+        } else if (e->key() == Qt::Key_E) {
+            m_inputs.ePressed = true;
+        }
+    }else{
+        if (e->key() == Qt::Key_Space) {
+            m_inputs.spacePressed = true;
+        }
+    }
+
+}
+void MyGL::keyReleaseEvent(QKeyEvent *e) {
+    if (!e->isAutoRepeat()) {
+        if (e->key() == Qt::Key_W) {
+            m_inputs.wPressed = false;
+        } else if (e->key() == Qt::Key_S) {
+            m_inputs.sPressed = false;
+        } else if (e->key() == Qt::Key_D) {
+            m_inputs.dPressed = false;
+        } else if (e->key() == Qt::Key_A) {
+            m_inputs.aPressed = false;
+        } else if (e->key() == Qt::Key_Q) {
+            m_inputs.qPressed = false;
+        } else if (e->key() == Qt::Key_E) {
+            m_inputs.ePressed = false;
+        } else if (e->key() == Qt::Key_Space) {
+            m_inputs.spacePressed = false;
+        }
     }
 }
-
 void MyGL::mouseMoveEvent(QMouseEvent *e) {
-    // TODO
+    float dx = e->pos().x() - lastMousePosition.x();
+    float dy = e->pos().y() - lastMousePosition.y();
+    lastMousePosition = e->pos();
+    m_player.rotateOnUpGlobal(dx);
+    m_player.rotateOnRightLocal(dy);
+    std::cout <<"dx" <<dx << std::endl;
+    std::cout <<"dy"<< dy << std::endl;
+
+    moveMouseToCenter();
 }
 
 void MyGL::mousePressEvent(QMouseEvent *e) {
-    // TODO
+    if (e->button() == Qt::LeftButton) {
+
+    }
+    else if (e->button() == Qt::RightButton) {
+
+    }
 }
