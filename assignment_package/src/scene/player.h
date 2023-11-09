@@ -10,7 +10,12 @@ private:
     const Terrain &mcr_terrain;
 
     void processInputs(InputBundle &inputs);
-    void computePhysics(float dT, const Terrain &terrain);
+    void computePhysics(float dT, const Terrain &terrain, InputBundle &input);
+    void terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain);
+    bool isBlockAt(glm::vec3& position, const Terrain& terrain);
+    bool isOnGround(const Terrain &terrain, InputBundle &input);
+    bool gridMarch( const Terrain &terrain, float *collisionDist,
+                   glm::ivec3 *collisionPoint, glm::vec3 corner,  glm::vec3 rayDir);
 
 public:
     // Readonly public reference to our camera

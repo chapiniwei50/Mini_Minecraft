@@ -23,7 +23,7 @@ private:
     ShaderProgram m_progInstanced;// A shader program that is designed to be compatible with instanced rendering
 
     GLuint vao; // A handle for our vertex array object. This will store the VBOs created in our geometry classes.
-                // Don't worry too much about this. Just know it is necessary in order to render geometry.
+        // Don't worry too much about this. Just know it is necessary in order to render geometry.
 
     Terrain m_terrain; // All of the Chunks that currently comprise the world.
     Player m_player; // The entity controlled by the user. Contains a camera to display what it sees as well.
@@ -31,9 +31,15 @@ private:
 
     QTimer m_timer; // Timer linked to tick(). Fires approximately 60 times per second.
 
+
+    QPoint lastMousePosition;
+    qint64 m_lastTime;
+
     void moveMouseToCenter(); // Forces the mouse position to the screen's center. You should call this
-                              // from within a mouse move event after reading the mouse movement so that
-                              // your mouse stays within the screen bounds and is always read.
+        // from within a mouse move event after reading the mouse movement so that
+        // your mouse stays within the screen bounds and is always read.
+
+
 
     void sendPlayerDataToGUI() const;
 
@@ -67,6 +73,7 @@ protected:
     // Automatically invoked when the user
     // presses a mouse button
     void mousePressEvent(QMouseEvent *e);
+    void keyReleaseEvent(QKeyEvent *e);
 
 private slots:
     void tick(); // Slot that gets called ~60 times per second by m_timer firing.
