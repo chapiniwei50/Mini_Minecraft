@@ -358,7 +358,6 @@ void Terrain::check_edge(float x_f, float z_f)
     }
 }
 
-
 void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     // Noise settings for biome determination and height variation.
     const float biomeScale = 0.05f; // Larger scale for biome determination.
