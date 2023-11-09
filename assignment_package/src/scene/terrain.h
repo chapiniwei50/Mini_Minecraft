@@ -5,6 +5,7 @@
 #include <array>
 #include <unordered_map>
 #include <unordered_set>
+#include <cmath>
 #include "shaderprogram.h"
 
 
@@ -13,6 +14,13 @@
 // Helper functions to convert (x, z) to and from hash map key
 int64_t toKey(int x, int z);
 glm::ivec2 toCoords(int64_t k);
+
+enum class BiomeType : unsigned char{
+    NULLBIOME,
+    DESSERT,
+    PLAIN,
+    MOUNTAIN
+};
 
 // The container class for all of the Chunks in the game.
 // Ultimately, while Terrain will always store all Chunks,
@@ -44,8 +52,11 @@ private:
 
     OpenGLContext* mp_context;
 
-    float PerlinNoise(float x, float z, float frequency, int octaves);
+    float PerlinNoise2D(float x, float z, float frequency, int octaves);
+    float PerlinNoise3D(glm::vec3 p);
     float perlinNoiseSingle(glm::vec2 uv);
+    float WorleyNoise(float x, float y);
+    void getHeight(int x, int z, int& y, BiomeType& b);
 
 public:
     Terrain(OpenGLContext *context);

@@ -55,6 +55,7 @@ BlockType Terrain::getBlockAt(int x, int y, int z) const
             return EMPTY;
         }
         const uPtr<Chunk> &c = getChunkAt(x, z);
+
         glm::vec2 chunkOrigin = glm::vec2(floor(x / 16.f) * 16, floor(z / 16.f) * 16);
         return c->getBlockAt(static_cast<unsigned int>(x - chunkOrigin.x),
                              static_cast<unsigned int>(y),
@@ -118,7 +119,7 @@ void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 Chunk* Terrain::instantiateChunkAt(int x, int z) {
     uPtr<Chunk> chunk = mkU<Chunk>(x, z, mp_context);
     Chunk *cPtr = chunk.get();
-    m_chunks[toKey(x, z)] = move(chunk);
+    m_chunks[toKey(x, z)] = std::move(chunk);
     // Set the neighbor pointers of itself and its neighbors
     if(hasChunkAt(x, z + 16)) {
         auto &chunkNorth = m_chunks[toKey(x, z + 16)];
@@ -158,10 +159,10 @@ void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shader
 void Terrain::CreateTestScene()
 {
     //Current boundary for testing (will be changed after milestone2)
-    int m_minX = -128;
-    int m_maxX = 128;
-    int m_minZ = -128;
-    int m_maxZ = 128;
+    int m_minX = 0;
+    int m_maxX = 64;
+    int m_minZ = 0;
+    int m_maxZ = 64;
 
 
     // Create the Chunks that will
@@ -177,20 +178,60 @@ void Terrain::CreateTestScene()
     // now exists.
     m_generatedTerrain.insert(toKey(0, 0));
 
-    //Noise terrain
-    const float terrainScale = 0.1f; // Smaller values will make the terrain smoother
-    const int heightMultiplier = 5;  // Adjust this for higher or lower terrain
-    const int baseHeight = 128;       // Base height for the terrain
-
     for(int x = m_minX; x < m_maxX; ++x) {
         for(int z = m_minZ; z < m_maxZ; ++z) {
-            float height = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
-            height += baseHeight;
-            int intHeight = static_cast<int>(round(height));
-            intHeight = intHeight > 255 ? 255 : intHeight;
-            for(int y = 0; y <= intHeight; ++y) {
-                BlockType blockType = (y == intHeight) ? GRASS : DIRT;
-                setBlockAt(x, y, z, blockType);
+            BiomeType biome;
+            int height;
+            getHeight(x,z,height,biome);
+
+            // Fill base with STONE
+            for (int y = 0; y <= 128; ++y) {
+                setBlockAt(x, y, z, STONE);
+            }
+
+            // Based on biome, fill above y = 128
+            for (int y = 129; y <= height; ++y) {
+                if (y == height) {
+                    // Top block determination
+                    if (biome == BiomeType::PLAIN) {
+                        setBlockAt(x, y, z, GRASS);
+                    } else if (biome == BiomeType::MOUNTAIN) {
+                        setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
+                    } else if (biome == BiomeType::DESSERT){
+                        setBlockAt(x, y, z, STONE);
+                    }
+                } else {
+                    // Filling other blocks
+                    if (biome == BiomeType::PLAIN) {
+                        setBlockAt(x, y, z, DIRT);
+                    } else if (biome == BiomeType::MOUNTAIN) {
+                        setBlockAt(x, y, z, STONE);
+                    } else if (biome == BiomeType::DESSERT){
+                        setBlockAt(x, y, z, DIRT);
+                    }
+                }
+            }
+
+            // Fill WATER if there's empty space between 128 and 138
+            for (int y = 129; y < 138; ++y) {
+                if (getBlockAt(x, y, z) == EMPTY) {
+                    setBlockAt(x, y, z, WATER);
+                }
+                else if(getBlockAt(x, y, z) == GRASS) {
+                    setBlockAt(x, y, z, DIRT);
+                }
+            }
+
+            //Generate Cave
+            for (int y = 1; y < 128; ++y) {
+                float noiseValue = PerlinNoise3D(glm::vec3(x, y, z) * 0.05f);
+                if (noiseValue < 0 && getBlockAt(x, y, z) == STONE)  {
+                    setBlockAt(x, y, z, EMPTY);
+                }
+                if (y < 25) {
+                    //Change for future LAVA
+                    setBlockAt(x, y, z, EMPTY);
+                }
             }
         }
     }
@@ -229,7 +270,7 @@ float Terrain::perlinNoiseSingle(glm::vec2 uv) {
     return surfletSum;
 }
 
-float Terrain::PerlinNoise(float x, float z, float frequency, int octaves) {
+float Terrain::PerlinNoise2D(float x, float z, float frequency, int octaves) {
     float amplitude = 1.0f;
     float maxAmplitude = 0.0f;
     float noise = 0.0f;
@@ -247,6 +288,7 @@ float Terrain::PerlinNoise(float x, float z, float frequency, int octaves) {
     return noise;
 }
 
+<<<<<<< HEAD
 void Terrain::check_edge(float x_f, float z_f)
 {
     // check whether the player is at the edge of the terrain
@@ -318,3 +360,102 @@ void Terrain::check_edge(float x_f, float z_f)
 }
 
 
+=======
+void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
+    // Noise settings for biome determination and height variation.
+    const float biomeScale = 0.05f; // Larger scale for biome determination.
+    const float terrainScale = 0.1f; // Terrain variation scale.
+    const int baseHeight = 135;      // Base height for the terrain.
+
+    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.5 + 0.5;
+
+    float height = baseHeight;
+
+    // Determine the biome based on the biomeNoiseValue
+    if (biomeNoiseValue <= 0.3) { // Plains, now using Worley noise
+        height += WorleyNoise(x * terrainScale * 0.1f, z * terrainScale * 0.1f) * 15 - 30;
+        b = BiomeType::PLAIN;
+    } else if (biomeNoiseValue >= 0.4 && biomeNoiseValue <= 0.7) { // Desert
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
+        b = BiomeType::DESSERT;
+    } else if (biomeNoiseValue > 0.7) { // Mountains
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
+        b = BiomeType::MOUNTAIN;
+    } else { // Transition between Plains and Desert
+        float plainsHeight = WorleyNoise(x * terrainScale * 0.1f, z * terrainScale * 0.1f) * 15 - 30;
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
+        float smoothStepInput = (biomeNoiseValue - 0.4f) / 0.3f;
+        float smoothStepResult = glm::smoothstep(0.25f, 0.75f, smoothStepInput);
+        height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
+        b = smoothStepResult < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
+    }
+    y = static_cast<int>(round(height));
+    y = std::min(255, std::max(0, y));
+}
+
+
+glm::vec2 fract(glm::vec2 v) {
+    return glm::vec2(v.x - std::floor(v.x), v.y - std::floor(v.y));
+}
+
+glm::vec2 floor(glm::vec2 v) {
+    return glm::vec2(std::floor(v.x), std::floor(v.y));
+}
+
+float length(glm::vec2 v) {
+    return std::sqrt(v.x * v.x + v.y * v.y);
+}
+
+float min(float a, float b) {
+    return (a < b) ? a : b;
+}
+
+float Terrain::WorleyNoise(float x, float y) {
+    glm::vec2 uv(x * 10.0f, y * 10.0f);
+    glm::vec2 uvInt = floor(uv);
+    glm::vec2 uvFract = fract(uv);
+    float minDist = 1.0f;
+
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            glm::vec2 neighbor(x, y);
+            glm::vec2 point = random2(uvInt + neighbor);
+            glm::vec2 diff = neighbor + point - uvFract;
+            float dist = length(diff);
+            minDist = min(minDist, dist);
+        }
+    }
+
+    return minDist;
+}
+
+glm::vec3 random3(glm::vec3 p) {
+    // This should return a random glm::vec3 where each component is in the range [-1, 1]
+    // Adjust the numbers for the dot product to suit your seed needs
+    return glm::fract(glm::sin(glm::vec3(glm::dot(p, glm::vec3(127.1, 311.7, 74.7)),
+                                    glm::dot(p, glm::vec3(269.5, 183.3, 246.1)),
+                                    glm::dot(p, glm::vec3(113.5, 271.9, 124.6))))
+                      * 43758.5453f) * 2.0f - 1.0f;
+}
+
+float surflet(glm::vec3 p, glm::vec3 gridPoint) {
+    glm::vec3 t = glm::abs(p - gridPoint);
+    t = 1.f - 6.f * glm::pow(t, glm::vec3(5.0)) + 15.f * glm::pow(t, glm::vec3(4.0f)) - 10.f * glm::pow(t, glm::vec3(3.0f));
+    glm::vec3 gradient = random3(gridPoint);
+    glm::vec3 diff = p - gridPoint;
+    float height = glm::dot(diff, gradient);
+    return height * t.x * t.y * t.z;
+}
+
+float Terrain::PerlinNoise3D(glm::vec3 p) {
+    float surfletSum = 0.f;
+    for(int dx = 0; dx <= 1; ++dx) {
+        for(int dy = 0; dy <= 1; ++dy) {
+            for(int dz = 0; dz <= 1; ++dz) {
+                surfletSum += surflet(p, glm::floor(p) + glm::vec3(dx, dy, dz));
+            }
+        }
+    }
+    return surfletSum;
+}
+>>>>>>> 358d8f2a642064e8c1a32502fc48663f589ffb7c
