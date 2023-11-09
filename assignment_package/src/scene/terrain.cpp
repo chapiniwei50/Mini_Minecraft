@@ -267,7 +267,6 @@ void Terrain::CreateTestScene()
                     setBlockAt(x, y, z, EMPTY);
                 }
             }
-            //setBlockAt(x, 0, z, BEDROCK);
         }
     }
 
@@ -339,12 +338,12 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
         b = BiomeType::MOUNTAIN;
     } else { // Transition between Plains and Desert
-        float plainsHeight = WorleyNoise(x * terrainScale, z * terrainScale) * 2 + 15;
+        float plainsHeight = WorleyNoise(x * terrainScale * 0.1f, z * terrainScale * 0.1f) * 15 - 30;
         float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
-        float lerpWeight = (biomeNoiseValue - 0.4f) * 10.0f; // This maps [0.4, 0.5] -> [0.0, 1.0].
-        height += plainsHeight * (1.0f - lerpWeight) + desertHeight * lerpWeight;
-        // Determine the dominant biome in the transition for BiomeType.
-        b = lerpWeight < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
+        float smoothStepInput = (biomeNoiseValue - 0.4f) / 0.3f;
+        float smoothStepResult = glm::smoothstep(0.25f, 0.75f, smoothStepInput);
+        height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
+        b = smoothStepResult < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
     }
     y = static_cast<int>(round(height));
     y = std::min(255, std::max(0, y));
