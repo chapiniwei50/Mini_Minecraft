@@ -4,11 +4,12 @@
 #include <iostream>
 
 Terrain::Terrain(OpenGLContext *context)
-    : m_chunks(), m_generatedTerrain(), m_geomCube(context), mp_context(context)
+    : m_chunks(), m_generatedTerrain(), mp_context(context)
 {}
 
 Terrain::~Terrain() {
-    m_geomCube.destroyVBOdata();
+    for (auto &i : m_chunks)
+        i.second->destroyVBOdata();
 }
 
 // Combine two 32-bit ints into one 64-bit int
@@ -116,7 +117,7 @@ void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 }
 
 Chunk* Terrain::instantiateChunkAt(int x, int z) {
-    uPtr<Chunk> chunk = mkU<Chunk>(x, z);
+    uPtr<Chunk> chunk = mkU<Chunk>(x, z, mp_context);
     Chunk *cPtr = chunk.get();
     m_chunks[toKey(x, z)] = std::move(chunk);
     // Set the neighbor pointers of itself and its neighbors
@@ -143,61 +144,26 @@ Chunk* Terrain::instantiateChunkAt(int x, int z) {
 // TODO: When you make Chunk inherit from Drawable, change this code so
 // it draws each Chunk with the given ShaderProgram, remembering to set the
 // model matrix to the proper X and Z translation!
-void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shaderProgram) {
-    m_geomCube.clearOffsetBuf();
-    m_geomCube.clearColorBuf();
-
-    std::vector<glm::vec3> offsets, colors;
-
+void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shaderProgram)
+{
     for(int x = minX; x < maxX; x += 16) {
         for(int z = minZ; z < maxZ; z += 16) {
-            const uPtr<Chunk> &chunk = getChunkAt(x, z);
-            for(int i = 0; i < 16; ++i) {
-                for(int j = 0; j < 256; ++j) {
-                    for(int k = 0; k < 16; ++k) {
-                        BlockType t = chunk->getBlockAt(i, j, k);
-
-                        if(t != EMPTY) {
-                            offsets.push_back(glm::vec3(i+x, j, k+z));
-                            switch(t) {
-                            case GRASS:
-                                colors.push_back(glm::vec3(95.f, 159.f, 53.f) / 255.f);
-                                break;
-                            case DIRT:
-                                colors.push_back(glm::vec3(121.f, 85.f, 58.f) / 255.f);
-                                break;
-                            case STONE:
-                                colors.push_back(glm::vec3(0.5f));
-                                break;
-                            case WATER:
-                                colors.push_back(glm::vec3(0.f, 0.f, 0.75f));
-                                break;
-                            default:
-                                // Other block types are not yet handled, so we default to debug purple
-                                colors.push_back(glm::vec3(1.f, 0.f, 1.f));
-                                break;
-                            }
-                        }
-                    }
-                }
+            if (hasChunkAt(x, z)){
+                const uPtr<Chunk> &chunk = getChunkAt(x, z);
+                shaderProgram->drawInterleaved(chunk.get());
             }
         }
     }
-
-    m_geomCube.createInstancedVBOdata(offsets, colors);
-    shaderProgram->drawInstanced(m_geomCube);
 }
 
 void Terrain::CreateTestScene()
 {
-    // TODO: DELETE THIS LINE WHEN YOU DELETE m_geomCube!
-    m_geomCube.createVBOdata();
-
     //Current boundary for testing (will be changed after milestone2)
     int m_minX = 0;
     int m_maxX = 64;
     int m_minZ = 0;
     int m_maxZ = 64;
+
 
     // Create the Chunks that will
     // store the blocks for our
@@ -270,6 +236,11 @@ void Terrain::CreateTestScene()
         }
     }
 
+    // for each chunk, create the vbo data
+    for (int x = m_minX; x < m_maxX; x += 16)
+        for (int z = m_minZ; z < m_maxZ; z += 16)
+            m_chunks[toKey(x, z)]->createVBOdata();
+
 }
 
 glm::vec2 random2(glm::vec2 p) {
@@ -317,6 +288,79 @@ float Terrain::PerlinNoise2D(float x, float z, float frequency, int octaves) {
     return noise;
 }
 
+<<<<<<< HEAD
+void Terrain::check_edge(float x_f, float z_f)
+{
+    // check whether the player is at the edge of the terrain
+    // if true, add a new terrain and add to VBO
+    int xFloor = static_cast<int>(glm::floor(x_f / 16.f)) * 16;
+    int zFloor = static_cast<int>(glm::floor(z_f / 16.f)) * 16;
+
+    Chunk* new_chunk = nullptr;
+
+    // check for four directions
+    int x_bias, z_bias;
+    x_bias = 0;
+    for (z_bias = -16; z_bias <= 16; z_bias += 32)
+        if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
+        {
+            new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
+
+            //Noise terrain
+            const float terrainScale = 0.1f; // Smaller values will make the terrain smoother
+            const int heightMultiplier = 5;  // Adjust this for higher or lower terrain
+            const int baseHeight = 128;       // Base height for the terrain
+
+            for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
+                for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
+                    float height = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
+                    height += baseHeight;
+                    int intHeight = static_cast<int>(round(height));
+                    intHeight = intHeight > 255 ? 255 : intHeight;
+                    for(int y = 0; y <= intHeight; ++y) {
+                        BlockType blockType = (y == intHeight) ? GRASS : DIRT;
+                        setBlockAt(x, y, z, blockType);
+                    }
+                }
+            }
+            new_chunk->createVBOdata();
+        }
+    z_bias = 0;
+    for (x_bias = -16; x_bias <= 16; x_bias += 32)
+        if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
+        {
+            new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
+
+            //Noise terrain
+            const float terrainScale = 0.1f; // Smaller values will make the terrain smoother
+            const int heightMultiplier = 5;  // Adjust this for higher or lower terrain
+            const int baseHeight = 128;       // Base height for the terrain
+
+            for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
+                for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
+                    float height = PerlinNoise(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
+                    height += baseHeight;
+                    int intHeight = static_cast<int>(round(height));
+                    intHeight = intHeight > 255 ? 255 : intHeight;
+                    for(int y = 0; y <= intHeight; ++y) {
+                        BlockType blockType = (y == intHeight) ? GRASS : DIRT;
+                        setBlockAt(x, y, z, blockType);
+                    }
+                }
+            }
+            new_chunk->createVBOdata();
+        }
+
+    if (new_chunk != nullptr)
+    {
+        // TODO: if there is a chunk added
+        // update the vbo of current chunk
+        // so that there will be no wall between chunks
+    }
+}
+
+
+=======
 void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     // Noise settings for biome determination and height variation.
     const float biomeScale = 0.05f; // Larger scale for biome determination.
@@ -414,3 +458,4 @@ float Terrain::PerlinNoise3D(glm::vec3 p) {
     }
     return surfletSum;
 }
+>>>>>>> 358d8f2a642064e8c1a32502fc48663f589ffb7c
