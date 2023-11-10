@@ -223,17 +223,16 @@ void MyGL::mouseMoveEvent(QMouseEvent *e) {
     lastMousePosition = e->pos();
     m_player.rotateOnUpGlobal(dx);
     m_player.rotateOnRightLocal(dy);
-    std::cout <<"dx" <<dx << std::endl;
-    std::cout <<"dy"<< dy << std::endl;
+
 
     moveMouseToCenter();
 }
 
 void MyGL::mousePressEvent(QMouseEvent *e) {
     if (e->button() == Qt::LeftButton) {
-
+        m_player.removeBlock(&m_terrain);
     }
     else if (e->button() == Qt::RightButton) {
-
+        m_player.addBlock(&m_terrain);
     }
 }
