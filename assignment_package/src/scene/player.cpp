@@ -18,7 +18,10 @@ void Player::tick(float dT, InputBundle &input) {
 
 void Player::processInputs(InputBundle &inputs) {
 
-    float acc = 10000000.f;
+
+    float acc = 20.f;
+    m_acceleration = glm::vec3(0);
+    m_velocity = glm::vec3(0);
 
     if(inputs.flight_mode){
         if (inputs.wPressed) {
@@ -38,16 +41,16 @@ void Player::processInputs(InputBundle &inputs) {
     else{
         if (inputs.wPressed) {
             m_forward.y = 0;
-            m_acceleration = acc * glm::normalize(m_forward);
+            m_acceleration = acc * glm::normalize(glm::vec3(m_forward.x, 0, m_forward.z));
         } else if (inputs.sPressed) {
             m_forward.y = 0;
-            m_acceleration = -acc * glm::normalize(glm::vec3(m_forward));
+            m_acceleration = -acc * glm::normalize(glm::vec3(m_forward.x, 0, m_forward.z));
         } else if (inputs.dPressed) {
             m_right.y = 0;
-            m_acceleration = acc * glm::normalize(glm::vec3(m_right));
+            m_acceleration = acc * glm::normalize(glm::vec3(m_right.x, 0, m_right.z));
         } else if (inputs.aPressed) {
             m_right.y = 0;
-            m_acceleration = -acc * glm::normalize(glm::vec3(m_right));
+            m_acceleration = -acc * glm::normalize(glm::vec3(m_right.x, 0, m_right.z));
             //check if it is on ground?
         } else if (inputs.spacePressed) {
             m_velocity = acc * this->m_up;
@@ -80,15 +83,11 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
     // and velocity, and also perform collision detection.
     std::cout<<"compute physics"<<std::endl;
 
-    const glm::vec3 gravity = glm::vec3(0.f, -10.f, 0.f);
-    const float friction = 0.1f;
+    const glm::vec3 gravity = glm::vec3(0.f, -100.f, 0.f);
+    const float friction = 0.95f;
     m_velocity *= friction;
 
     m_velocity += m_acceleration * dT;
-    std::cout<<"velocity"<<m_velocity.x<<std::endl;
-    std::cout<<"acc"<<m_acceleration.x<<std::endl;
-    std::cout<<"dT"<<dT<<std::endl;
-
 
 
 
@@ -100,9 +99,9 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
             m_velocity.y = 0;
         }
         else{
-//            std::cout<<"not onground"<<std::endl;
-//            m_velocity += gravity * dT;
-//            m_acceleration = gravity;
+            std::cout<<"not onground"<<std::endl;
+            m_velocity += gravity * dT;
+            m_acceleration = gravity;
         }
 
         terrain_collision_check(&rayDir, terrain);
@@ -202,24 +201,97 @@ bool Player::gridMarch( const Terrain &terrain, float *collisionDist,
 
 }
 
-//BlockType Player::removeBlock() {
-//    // Implement ray casting and grid marching to find and remove the block
-//    glm::vec3 rayOrigin = m_camera.mcr_position;
-//    glm::vec3 rayDirection = 3.f * glm::normalize(this->m_forward);
-//    float outDist = 0.f;
-//    glm::ivec3 outBlockHit = ivec3();
+void Player::addBlock(Terrain *terrain) {
+    glm::vec3 corner = m_camera.mcr_position;
+    glm::vec3 rayDir =  3.f *glm::normalize(this->m_forward);
+    float maxDistance = 3.f;
+    float collDist;
+    glm::ivec3 collHit;
+    std::cout<<"add block"<<std::endl;
+    if (gridMarch(*terrain, &collDist, &collHit, corner, rayDir * maxDistance)) {
+        if(collDist < maxDistance){
+            // determine the face of the block that was hit
+            glm::vec3 collisionPoint = corner + rayDir * collDist;
+            glm::ivec3 faceNormal = computeFaceNormal(collHit, collisionPoint);
 
-//    if (gridMarch(rayOrigin, rayDirection, *terrain, &outDist, &outBlockHit)) {
-//        BlockType blockType = terrain->getBlockAt(outBlockHit.x, outBlockHit.y, outBlockHit.z);
-//        terrain->setBlockAt(outBlockHit.x, outBlockHit.y, outBlockHit.z, EMPTY);
-//        terrain->getChunkAt(outBlockHit.x, outBlockHit.z).get()->destroy();
-//        terrain->getChunkAt(outBlockHit.x, outBlockHit.z).get()->generateVBOData();
-//        terrain->getChunkAt(outBlockHit.x, outBlockHit.z).get()->create();
-//        std::cout << "remove block" << std::endl;
-//        return blockType;
-//    }
-//    return EMPTY;
-//}
+            // new position for new block
+            glm::ivec3 newBlockPos = collHit + faceNormal;
+
+            // check if the position where we want to add the new block is empty
+            if(terrain->getBlockAt(newBlockPos.x, newBlockPos.y, newBlockPos.z) == EMPTY) {
+                BlockType blockType = DIRT;
+                terrain->setBlockAt(newBlockPos.x, newBlockPos.y, newBlockPos.z, blockType);
+
+                // update chunk
+                uPtr<Chunk>& chunk = terrain->getChunkAt(newBlockPos.x, newBlockPos.z);
+                chunk->destroyVBOdata();
+                chunk->createVBOdata();
+            }
+        }
+    }
+
+
+}
+
+glm::ivec3 Player::computeFaceNormal(const glm::ivec3 &blockPos, const glm::vec3 &collisionPoint) {
+    glm::ivec3 faceNormal(0, 0, 0);
+
+    // relative position of the collision point to the block position
+    glm::vec3 relativeCollisionPoint = collisionPoint - glm::vec3(blockPos);
+
+    // how far the collision point is from the center of each face
+    glm::vec3 distances = glm::abs(relativeCollisionPoint - 0.5f);
+
+    // find max distance component to determine the face that was hit
+    // 0 for x, 1 for y, 2 for z
+    float maxDist = distances.x;
+    int maxIndex = 0;
+
+    if(distances.y > maxDist) {
+        maxDist = distances.y;
+        maxIndex = 1;
+    }
+    if(distances.z > maxDist) {
+        maxIndex = 2;
+    }
+    if (maxIndex == 0) {
+        faceNormal.x = (relativeCollisionPoint.x > 0.5f) ? 1 : -1;
+    } else if (maxIndex == 1) {
+        faceNormal.y = (relativeCollisionPoint.y > 0.5f) ? 1 : -1;
+    } else {
+        faceNormal.z = (relativeCollisionPoint.z > 0.5f) ? 1 : -1;
+    }
+
+
+    return faceNormal;
+
+}
+void Player::removeBlock(Terrain *terrain) {
+    std::cout<<"remove block"<<std::endl;
+
+    // Implement ray casting and grid marching to find and remove the block
+    glm::vec3 corner = m_camera.mcr_position;
+    glm::vec3 rayDir =  3.f *glm::normalize(this->m_forward);
+    float maxDistance = 3.f;
+
+    float collDist;
+    glm::ivec3 collHit;
+
+    if (gridMarch(*terrain, &collDist, &collHit, corner, rayDir)) {
+        if(collDist < maxDistance){
+
+            BlockType removedBlockType = terrain->getBlockAt(collHit.x, collHit.y, collHit.z);
+            // remove the block by setting its type to EMPTY
+            terrain->setBlockAt(collHit.x, collHit.y, collHit.z, EMPTY);
+            // update the chunk containing this block
+            uPtr<Chunk>& chunk = terrain->getChunkAt(collHit.x, collHit.z);
+            chunk->destroyVBOdata();
+            chunk->createVBOdata();
+        }
+
+    }
+}
+
 
 
 void Player::setCameraWidthHeight(unsigned int w, unsigned int h) {
