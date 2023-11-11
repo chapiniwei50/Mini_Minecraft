@@ -19,7 +19,7 @@ void Player::tick(float dT, InputBundle &input) {
 void Player::processInputs(InputBundle &inputs) {
 
 
-    float acc = 20.f;
+    float acc = 1000.f;
     m_acceleration = glm::vec3(0);
     m_velocity = glm::vec3(0);
 
@@ -81,31 +81,32 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
 
     // TODO: Update the Player's position based on its
     // and velocity, and also perform collision detection.
-    std::cout<<"compute physics"<<std::endl;
+    //std::cout<<"compute physics"<<std::endl;
 
     const glm::vec3 gravity = glm::vec3(0.f, -100.f, 0.f);
-    const float friction = 0.95f;
+    const float friction = 0.9999999f;
     m_velocity *= friction;
-
     m_velocity += m_acceleration * dT;
-
-
-
     glm::vec3 rayDir = m_velocity * dT;
 
+
+
     if(!input.flight_mode){
+
         if(isOnGround(terrain, input)){
-            std::cout<<"onground"<<std::endl;
+            //std::cout<<"onground"<<std::endl;
             m_velocity.y = 0;
         }
         else{
-            std::cout<<"not onground"<<std::endl;
+            //std::cout<<"not onground"<<std::endl;
             m_velocity += gravity * dT;
             m_acceleration = gravity;
         }
 
-        terrain_collision_check(&rayDir, terrain);
+        //terrain_collision_check(&rayDir, terrain);
     }
+
+
     this->moveAlongVector(rayDir);
 }
 
@@ -207,7 +208,7 @@ void Player::addBlock(Terrain *terrain) {
     float maxDistance = 3.f;
     float collDist;
     glm::ivec3 collHit;
-    std::cout<<"add block"<<std::endl;
+    //std::cout<<"add block"<<std::endl;
     if (gridMarch(*terrain, &collDist, &collHit, corner, rayDir * maxDistance)) {
         if(collDist < maxDistance){
             // determine the face of the block that was hit
@@ -267,9 +268,10 @@ glm::ivec3 Player::computeFaceNormal(const glm::ivec3 &blockPos, const glm::vec3
 
 }
 void Player::removeBlock(Terrain *terrain) {
-    std::cout<<"remove block"<<std::endl;
+    //std::cout<<"remove block"<<std::endl;
 
     // Implement ray casting and grid marching to find and remove the block
+
     glm::vec3 corner = m_camera.mcr_position;
     glm::vec3 rayDir =  3.f *glm::normalize(this->m_forward);
     float maxDistance = 3.f;
@@ -288,7 +290,6 @@ void Player::removeBlock(Terrain *terrain) {
             chunk->destroyVBOdata();
             chunk->createVBOdata();
         }
-
     }
 }
 

@@ -12,7 +12,7 @@ MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
     m_worldAxes(this),
     m_progLambert(this), m_progFlat(this), m_progInstanced(this),
-    m_terrain(this), m_player(glm::vec3(48.f, 129.f, 48.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch())
+    m_terrain(this), m_player(glm::vec3(48.f, 160.f, 48.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch())
 {
     // Connect the timer to a function so that when the timer ticks the function is executed
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(tick()));
@@ -98,13 +98,15 @@ void MyGL::resizeGL(int w, int h) {
 void MyGL::tick() {
 
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-    float deltaT = (currentTime - m_lastTime);
-    std::cout<<"current time"<<currentTime<<std::endl;
+    float deltaT = (currentTime - m_lastTime) * 0.001;
+    //std::cout<<"current time"<<currentTime<<std::endl;
 
-    std::cout<<"my last time"<<m_lastTime<<std::endl;
-    std::cout<<"delta time"<<deltaT<<std::endl;
+    //std::cout<<"my last time"<<m_lastTime<<std::endl;
+    //std::cout<<"delta time"<<deltaT<<std::endl;
     m_lastTime = currentTime;
     m_player.tick(deltaT, m_inputs);
+
+    m_terrain.check_edge(m_player.mcr_position.x, m_player.mcr_position.z);
 
 
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
@@ -135,9 +137,12 @@ void MyGL::paintGL() {
     m_progLambert.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     m_progInstanced.setViewProjMatrix(m_player.mcr_camera.getViewProj());
 
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CW);
+    glCullFace(GL_BACK);
     renderTerrain();
 
-    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST); 
     m_progFlat.setModelMatrix(glm::mat4());
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     m_progFlat.draw(m_worldAxes);
@@ -148,7 +153,9 @@ void MyGL::paintGL() {
 // terrain that surround the player (refer to Terrain::m_generatedTerrain
 // for more info)
 void MyGL::renderTerrain() {
-    m_terrain.draw(0, 64, 0, 64, &m_progInstanced);
+    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
+    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
+    m_terrain.draw(x - 64, x + 64, z - 64, z + 64, &m_progInstanced);
 }
 
 
@@ -175,11 +182,11 @@ void MyGL::keyPressEvent(QKeyEvent *e) {
     } else if (e->key() == Qt::Key_F) {
         if( m_inputs.flight_mode){
             m_inputs.flight_mode = false;
-            std::cout <<"flight mode off"<< std::endl;
+            //std::cout <<"flight mode off"<< std::endl;
         }
         else{
             m_inputs.flight_mode = true;
-            std::cout <<"flight mode on"<< std::endl;
+            //std::cout <<"flight mode on"<< std::endl;
 
         }
 
