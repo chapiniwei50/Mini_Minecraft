@@ -164,7 +164,6 @@ void Terrain::CreateTestScene()
     int m_minZ = 0;
     int m_maxZ = 64;
 
-
     // Create the Chunks that will
     // store the blocks for our
     // initial world space
@@ -177,12 +176,6 @@ void Terrain::CreateTestScene()
     // the "generated terrain zone" at (0,0)
     // now exists.
     m_generatedTerrain.insert(toKey(0, 0));
-
-    for(int x = m_minX; x < m_maxX; ++x) {
-        for(int z = m_minZ; z < m_maxZ; ++z) {
-
-        }
-    }
 
     // for each chunk, create the vbo data
     for (int x = m_minX; x < m_maxX; x += 16)

@@ -201,6 +201,8 @@ void MyGL::keyPressEvent(QKeyEvent *e) {
     }else{
         if (e->key() == Qt::Key_Space) {
             m_inputs.spacePressed = true;
+        } else if (e->key() == Qt::Key_Shift){
+
         }
     }
 
