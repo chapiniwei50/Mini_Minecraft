@@ -280,6 +280,8 @@ void Chunk::buff_data(std::vector<glm::vec4> &pos_nor_color, std::vector<GLuint>
     generateInterleaved();
     mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufInterleaved);
     mp_context->glBufferData(GL_ARRAY_BUFFER, pos_nor_color.size() * sizeof(glm::vec4), pos_nor_color.data(), GL_STATIC_DRAW);
+
+
 }
 
 
