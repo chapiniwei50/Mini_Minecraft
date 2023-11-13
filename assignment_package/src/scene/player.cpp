@@ -103,7 +103,7 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
             m_acceleration = gravity;
         }
 
-        terrain_collision_check(&rayDir, terrain);
+        //terrain_collision_check(&rayDir, terrain);
     }
 
 
