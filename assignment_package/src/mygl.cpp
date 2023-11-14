@@ -12,7 +12,7 @@ MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
     m_worldAxes(this),
     m_progLambert(this), m_progFlat(this), m_progInstanced(this),
-    m_terrain(this), m_player(glm::vec3(48.f, 160.f, 48.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch())
+    m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch())
 {
     // Connect the timer to a function so that when the timer ticks the function is executed
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(tick()));
@@ -201,6 +201,8 @@ void MyGL::keyPressEvent(QKeyEvent *e) {
     }else{
         if (e->key() == Qt::Key_Space) {
             m_inputs.spacePressed = true;
+        } else if (e->key() == Qt::Key_Shift){
+
         }
     }
 
@@ -225,14 +227,17 @@ void MyGL::keyReleaseEvent(QKeyEvent *e) {
     }
 }
 void MyGL::mouseMoveEvent(QMouseEvent *e) {
+
     float dx = e->pos().x() - lastMousePosition.x();
     float dy = e->pos().y() - lastMousePosition.y();
     lastMousePosition = e->pos();
     m_player.rotateOnUpGlobal(dx);
     m_player.rotateOnRightLocal(dy);
 
-
+#ifdef Q_OS_MAC
     moveMouseToCenter();
+#endif
+
 }
 
 void MyGL::mousePressEvent(QMouseEvent *e) {
