@@ -245,164 +245,28 @@ void Terrain::check_edge(float x_f, float z_f)
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
-
-            //Noise terrain
-            const float terrainScale = 0.1f; // Smaller values will make the terrain smoother
-            const int heightMultiplier = 5;  // Adjust this for higher or lower terrain
-            const int baseHeight = 128;       // Base height for the terrain
-
             for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
                 for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-
-                    /*
-                    float height = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
-                    height += baseHeight;
-                    int intHeight = static_cast<int>(round(height));
-                    intHeight = intHeight > 255 ? 255 : intHeight;
-                    for(int y = 0; y <= intHeight; ++y) {
-                        BlockType blockType = (y == intHeight) ? GRASS : DIRT;
-                        setBlockAt(x, y, z, blockType);
-                    }
-                    */
                     BiomeType biome;
                     int height;
                     getHeight(x,z,height,biome);
-
-                    // Fill base with STONE
-                    for (int y = 0; y <= 128; ++y) {
-                        setBlockAt(x, y, z, STONE);
-                    }
-
-                    // Based on biome, fill above y = 128
-                    for (int y = 129; y <= height; ++y) {
-                        if (y == height) {
-                            // Top block determination
-                            if (biome == BiomeType::PLAIN) {
-                                setBlockAt(x, y, z, GRASS);
-                            } else if (biome == BiomeType::MOUNTAIN) {
-                                setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
-                            } else if (biome == BiomeType::DESSERT){
-                                setBlockAt(x, y, z, STONE);
-                            }
-                        } else {
-                            // Filling other blocks
-                            if (biome == BiomeType::PLAIN) {
-                                setBlockAt(x, y, z, DIRT);
-                            } else if (biome == BiomeType::MOUNTAIN) {
-                                setBlockAt(x, y, z, STONE);
-                            } else if (biome == BiomeType::DESSERT){
-                                setBlockAt(x, y, z, DIRT);
-                            }
-                        }
-                    }
-
-                    // Fill WATER if there's empty space between 128 and 138
-                    for (int y = 129; y < 138; ++y) {
-                        if (getBlockAt(x, y, z) == EMPTY) {
-                            setBlockAt(x, y, z, WATER);
-                        }
-                        else if(getBlockAt(x, y, z) == GRASS) {
-                            setBlockAt(x, y, z, DIRT);
-                        }
-                    }
-
-                    //Generate Cave
-                    /*
-                    for (int y = 1; y < 32; ++y) {
-                        float noiseValue = PerlinNoise3D(glm::vec3(x, y, z) * 0.05f);
-                        if (noiseValue < 0 && getBlockAt(x, y, z) == STONE)  {
-                            setBlockAt(x, y, z, EMPTY);
-                        }
-                        if (y < 25) {
-                            //Change for future LAVA
-                            setBlockAt(x, y, z, EMPTY);
-                        }
-                    }
-                    */
-
-
-
+                    fillTerrainBlocks(x, z, biome, height);
                 }
             }
             new_chunk->createVBOdata();
         }
+
     z_bias = 0;
     for (x_bias = -16; x_bias <= 16; x_bias += 32)
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
-
-            //Noise terrain
-            const float terrainScale = 0.1f; // Smaller values will make the terrain smoother
-            const int heightMultiplier = 5;  // Adjust this for higher or lower terrain
-            const int baseHeight = 110;       // Base height for the terrain
-
             for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
                 for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-                    /*
-                    float height = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * heightMultiplier;
-                    height += baseHeight;
-                    int intHeight = static_cast<int>(round(height));
-                    intHeight = intHeight > 255 ? 255 : intHeight;
-                    for(int y = 0; y <= intHeight; ++y) {
-                        BlockType blockType = (y == intHeight) ? GRASS : DIRT;
-                        setBlockAt(x, y, z, blockType);
-                    }
-                    */
                     BiomeType biome;
                     int height;
                     getHeight(x,z,height,biome);
-
-                    // Fill base with STONE
-                    for (int y = 0; y <= 128; ++y) {
-                        setBlockAt(x, y, z, STONE);
-                    }
-
-                    // Based on biome, fill above y = 128
-                    for (int y = 129; y <= height; ++y) {
-                        if (y == height) {
-                            // Top block determination
-                            if (biome == BiomeType::PLAIN) {
-                                setBlockAt(x, y, z, GRASS);
-                            } else if (biome == BiomeType::MOUNTAIN) {
-                                setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
-                            } else if (biome == BiomeType::DESSERT){
-                                setBlockAt(x, y, z, STONE);
-                            }
-                        } else {
-                            // Filling other blocks
-                            if (biome == BiomeType::PLAIN) {
-                                setBlockAt(x, y, z, DIRT);
-                            } else if (biome == BiomeType::MOUNTAIN) {
-                                setBlockAt(x, y, z, STONE);
-                            } else if (biome == BiomeType::DESSERT){
-                                setBlockAt(x, y, z, DIRT);
-                            }
-                        }
-                    }
-
-                    // Fill WATER if there's empty space between 128 and 138
-                    for (int y = 129; y < 138; ++y) {
-                        if (getBlockAt(x, y, z) == EMPTY) {
-                            setBlockAt(x, y, z, WATER);
-                        }
-                        else if(getBlockAt(x, y, z) == GRASS) {
-                            setBlockAt(x, y, z, DIRT);
-                        }
-                    }
-
-                    //Generate Cave
-                    /*
-                    for (int y = 1; y < 32; ++y) {
-                        float noiseValue = PerlinNoise3D(glm::vec3(x, y, z) * 0.05f);
-                        if (noiseValue < 0 && getBlockAt(x, y, z) == STONE)  {
-                            setBlockAt(x, y, z, EMPTY);
-                        }
-                        if (y < 25) {
-                            //Change for future LAVA
-                            setBlockAt(x, y, z, EMPTY);
-                        }
-                    }*/
+                    fillTerrainBlocks(x, z, biome, height);
                 }
             }
             new_chunk->createVBOdata();
@@ -417,10 +281,65 @@ void Terrain::check_edge(float x_f, float z_f)
     }
 }
 
+void Terrain::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
+    // Fill base with STONE
+    for (int y = 0; y <= 128; ++y) {
+        setBlockAt(x, y, z, STONE);
+    }
+
+    // Based on biome, fill above y = 128
+    for (int y = 129; y <= height; ++y) {
+        if (y == height) {
+            // Top block determination
+            if (biome == BiomeType::PLAIN) {
+                setBlockAt(x, y, z, GRASS);
+            } else if (biome == BiomeType::MOUNTAIN) {
+                setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
+            } else if (biome == BiomeType::DESSERT){
+                setBlockAt(x, y, z, STONE);
+            }
+        } else {
+            // Filling other blocks
+            if (biome == BiomeType::PLAIN) {
+                setBlockAt(x, y, z, DIRT);
+            } else if (biome == BiomeType::MOUNTAIN) {
+                setBlockAt(x, y, z, STONE);
+            } else if (biome == BiomeType::DESSERT){
+                setBlockAt(x, y, z, DIRT);
+            }
+        }
+    }
+
+    // Fill WATER if there's empty space between 128 and 138
+    for (int y = 129; y < 138; ++y) {
+        if (getBlockAt(x, y, z) == EMPTY) {
+            setBlockAt(x, y, z, WATER);
+        }
+        else if(getBlockAt(x, y, z) == GRASS) {
+            setBlockAt(x, y, z, DIRT);
+        }
+    }
+
+    // Generate Cave (Optional, depending on your implementation)
+    /*
+    for (int y = 1; y < 32; ++y) {
+        float noiseValue = PerlinNoise3D(glm::vec3(x, y, z) * 0.05f);
+        if (noiseValue < 0 && getBlockAt(x, y, z) == STONE)  {
+            setBlockAt(x, y, z, EMPTY);
+        }
+        if (y < 25) {
+            // Change for future LAVA
+            setBlockAt(x, y, z, EMPTY);
+        }
+    }
+    */
+}
+
+
 void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     // Noise settings for biome determination and height variation.
     const float biomeScale = 0.05f; // Larger scale for biome determination.
-    const float terrainScale = 0.1f; // Terrain variation scale.
+    const float terrainScale = 0.01f; // Terrain variation scale.
     const int baseHeight = 135;      // Base height for the terrain.
 
     float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.5 + 0.5;
@@ -428,18 +347,18 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     float height = baseHeight;
 
     // Determine the biome based on the biomeNoiseValue
-    if (biomeNoiseValue <= 0.3) { // Plains
-        height += WorleyNoise(x * terrainScale, z * terrainScale) * 3 - 30;
+    if (biomeNoiseValue <= 0.5) { // Plains
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
         b = BiomeType::PLAIN;
-    } else if (biomeNoiseValue >= 0.4 && biomeNoiseValue <= 0.7) { // Desert
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
+    } else if (biomeNoiseValue >= 0.6 && biomeNoiseValue <= 0.8) { // Desert
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
         b = BiomeType::DESSERT;
-    } else if (biomeNoiseValue > 0.7) { // Mountains
+    } else if (biomeNoiseValue > 0.8) { // Mountains
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
         b = BiomeType::MOUNTAIN;
     } else { // Transition between Plains and Desert
-        float plainsHeight = WorleyNoise(x * terrainScale * 0.1f, z * terrainScale * 0.1f) * 15 - 30;
-        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 15;
+        float plainsHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
         float smoothStepInput = (biomeNoiseValue - 0.4f) / 0.3f;
         float smoothStepResult = glm::smoothstep(0.25f, 0.75f, smoothStepInput);
         height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;

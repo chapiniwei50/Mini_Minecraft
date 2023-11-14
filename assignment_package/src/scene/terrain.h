@@ -57,6 +57,7 @@ private:
     float perlinNoiseSingle(glm::vec2 uv);
     float WorleyNoise(float x, float y);
     void getHeight(int x, int z, int& y, BiomeType& b);
+    void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
 
 public:
     Terrain(OpenGLContext *context);
