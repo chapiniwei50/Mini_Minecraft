@@ -15,7 +15,7 @@ private:
     bool isBlockAt(glm::vec3& position, const Terrain& terrain);
     bool isOnGround(const Terrain &terrain, InputBundle &input);
     bool gridMarch( const Terrain &terrain, float *collisionDist,
-                   glm::ivec3 *collisionPoint, glm::vec3 corner,  glm::vec3 rayDir);
+                   glm::ivec3 *collisionPoint, glm::vec3 corner,  glm::vec3 rayDir, float maxMarchLength);
     glm::ivec3 computeFaceNormal(const glm::ivec3 &blockPos, const glm::vec3 &collisionPoint);
 
 

@@ -74,29 +74,35 @@ bool Player::isOnGround( const Terrain &terrain, InputBundle &input) {
     return false; // return false if no ground is found after checking all corners
 }
 
-
 void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input) {
 
     // TODO: Update the Player's position based on its
     // and velocity, and also perform collision detection.
 
-    const glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
     const float friction = 0.9f;
+    const glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
+    if(!input.flight_mode){
+        m_acceleration += gravity;
+    }
     m_velocity *= friction;
-    m_velocity += m_acceleration * dT;
     glm::vec3 rayDir = m_velocity * dT;
+    terrain_collision_check(&rayDir, terrain);
 
+    this->moveAlongVector(rayDir);
+    m_velocity += m_acceleration * dT;
+
+    /*
     if(!input.flight_mode){
         if(isOnGround(terrain, input)){
             m_velocity.y = 0;
         }
         else{
+            const glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
             m_velocity += gravity * dT;
-            m_acceleration = gravity;
+            m_acceleration += gravity;
         }
-    }
-    terrain_collision_check(&rayDir, terrain);
-    this->moveAlongVector(rayDir);
+    }*/
+
 }
 
 void Player::terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain) {
@@ -115,7 +121,7 @@ void Player::terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain) 
             for (int y = 0; y <= 2; y++) {
                 glm::vec3 corner = playerMin + glm::vec3(x, y, z);
                 try {
-                    if (gridMarch(terrain, &collisionDist, &collisionPoint, corner, *rayDir)) {
+                    if (gridMarch(terrain, &collisionDist, &collisionPoint, corner, *rayDir, glm::length(m_velocity))) {
 
                         float currentDistanceToCollision = glm::abs(glm::length(this->m_position - glm::vec3(collisionPoint)));
                         float safeCollisionResponseDistance = collisionDist - 0.01f;
@@ -123,9 +129,7 @@ void Player::terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain) 
 
                         *rayDir = distance * glm::normalize(*rayDir);
 
-                        if (x == 1) m_velocity.x = 0;
-                        if (y == 1) m_velocity.y = 0;
-                        if (z == 1) m_velocity.z = 0;
+
 
                     }
                 } catch(std::exception &e) {
@@ -136,13 +140,52 @@ void Player::terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain) 
     }
 }
 
-bool Player::gridMarch( const Terrain &terrain, float *collisionDist,
-                       glm::ivec3 *collisionPoint, glm::vec3 corner,  glm::vec3 rayDir) {
-    rayDir = glm::length(rayDir) > 0 ? glm::normalize(rayDir) : rayDir; // world dist
+bool Player::gridMarch(const Terrain &terrain,
+                       float *collisionDist, glm::ivec3 *collisionPoint,
+                       glm::vec3 rayOrigin,  glm::vec3 rayDir, float maxMarchLength) {
+    if (glm::length(rayDir) == 0) {
+        return false;
+    }
+    rayDir = glm::normalize(rayDir);
 
+    glm::vec3 rayStepSize = glm::sign(rayDir);  // Step size in each axis
+    glm::vec3 invRayDir = 1.0f / rayDir;  // Inverse ray direction for step calculations
+    glm::ivec3 mapCheck = glm::ivec3(glm::floor(rayOrigin));  // Current grid cell
+
+    glm::vec3 nextBoundary = rayOrigin + (glm::ceil(rayOrigin) - rayOrigin) * rayStepSize;
+    glm::ivec3 stepDir = glm::ivec3(glm::sign(rayDir));  // Direction to step in each axis
+
+    float totalRayLength = 0.0f;  // Total distance traveled along the ray
+
+    while (totalRayLength < maxMarchLength) {
+        // Determine the axis along which the ray will next intersect a grid boundary
+        int k = 0;
+        if (nextBoundary.x < nextBoundary.y) {
+            if (nextBoundary.x < nextBoundary.z) k = 0;
+            else k = 2;
+        } else {
+            if (nextBoundary.y < nextBoundary.z) k = 1;
+            else k = 2;
+        }
+
+        // Move to the next grid cell
+        mapCheck[k] += stepDir[k];
+        totalRayLength = (nextBoundary[k] - rayOrigin[k]) * invRayDir[k];
+        nextBoundary[k] += rayStepSize[k];
+
+        if (terrain.getBlockAt(mapCheck.x, mapCheck.y, mapCheck.z) != EMPTY) {
+            *collisionDist = totalRayLength;
+            *collisionPoint = mapCheck;
+            return true;  // Collision detected
+        }
+    }
+
+    return false;  // No collision detected within maxMarchLength
+
+    /*
     glm::vec3 rayStepSize = glm::sign(rayDir) * glm::vec3(1.0f);
     glm::vec3 rayLength1D;
-    glm::ivec3 mapCheck = glm::ivec3(corner);
+    glm::ivec3 mapCheck = glm::ivec3(rayOrigin);
     glm::ivec3 stepDir;
 
     for (int i = 0; i < 3; ++i) {
@@ -153,14 +196,15 @@ bool Player::gridMarch( const Terrain &terrain, float *collisionDist,
             stepDir[i] = (rayDir[i] > 0) ? 1 : -1;
         }
     }
-    glm::vec3 nextBoundary = corner;
+    glm::vec3 nextBoundary = rayOrigin;
     for (int i = 0; i < 3; ++i) {
         if (rayDir[i] > 0) {
-            nextBoundary[i] = ceil(corner[i]) - corner[i];
+            nextBoundary[i] = ceil(rayOrigin[i]) - rayOrigin[i];
         } else if (rayDir[i] < 0) {
-            nextBoundary[i] = corner[i] - floor(corner[i]);
+            nextBoundary[i] = rayOrigin[i] - floor(rayOrigin[i]);
         }
     }
+
     float maxLength = glm::length(rayDir); // max distance the ray should check
     float currRayLength = 0; // how far along the ray we've traveled
     while(currRayLength < maxLength){
@@ -195,6 +239,7 @@ bool Player::gridMarch( const Terrain &terrain, float *collisionDist,
     }
     *collisionDist = maxLength;
     return false; //no collision found within the max length
+    */
 
 }
 
@@ -205,7 +250,7 @@ void Player::addBlock(Terrain *terrain) {
     float collDist;
     glm::ivec3 collHit;
     //std::cout<<"add block"<<std::endl;
-    if (gridMarch(*terrain, &collDist, &collHit, corner, rayDir * maxDistance)) {
+    if (gridMarch(*terrain, &collDist, &collHit, corner, rayDir * maxDistance, 3.0f)) {
         if(collDist < maxDistance){
             // determine the face of the block that was hit
             glm::vec3 collisionPoint = corner + rayDir * collDist;
@@ -259,7 +304,6 @@ glm::ivec3 Player::computeFaceNormal(const glm::ivec3 &blockPos, const glm::vec3
         faceNormal.z = (relativeCollisionPoint.z > 0.5f) ? 1 : -1;
     }
 
-
     return faceNormal;
 
 }
@@ -274,7 +318,7 @@ void Player::removeBlock(Terrain *terrain) {
     float collDist;
     glm::ivec3 collHit;
 
-    if (gridMarch(*terrain, &collDist, &collHit, corner, rayDir)) {
+    if (gridMarch(*terrain, &collDist, &collHit, corner, rayDir, 3.0f)) {
         if(collDist < maxDistance){
 
             BlockType removedBlockType = terrain->getBlockAt(collHit.x, collHit.y, collHit.z);
