@@ -6,6 +6,7 @@
 class Player : public Entity {
 private:
     glm::vec3 m_velocity, m_acceleration;
+    glm::vec2 m_cameraOrientation;
     Camera m_camera;
     const Terrain &mcr_terrain;
 
@@ -14,8 +15,7 @@ private:
     void terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain);
     bool isBlockAt(glm::vec3& position, const Terrain& terrain);
     bool isOnGround(const Terrain &terrain, InputBundle &input);
-    bool gridMarch( const Terrain &terrain, float *collisionDist,
-                   glm::ivec3 *collisionPoint, glm::vec3 corner,  glm::vec3 rayDir, float maxMarchLength);
+    bool gridMarch(glm::vec3 rayOrigin, glm::vec3 rayDirection, const Terrain &terrain, float *out_dist, glm::ivec3 *out_blockHit, glm::ivec3 *prevCell = nullptr);
     glm::ivec3 computeFaceNormal(const glm::ivec3 &blockPos, const glm::vec3 &collisionPoint);
 
 
