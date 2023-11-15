@@ -143,46 +143,9 @@ void Player::terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain) 
 bool Player::gridMarch(const Terrain &terrain,
                        float *collisionDist, glm::ivec3 *collisionPoint,
                        glm::vec3 rayOrigin,  glm::vec3 rayDir, float maxMarchLength) {
-    if (glm::length(rayDir) == 0) {
-        return false;
-    }
-    rayDir = glm::normalize(rayDir);
 
-    glm::vec3 rayStepSize = glm::sign(rayDir);  // Step size in each axis
-    glm::vec3 invRayDir = 1.0f / rayDir;  // Inverse ray direction for step calculations
-    glm::ivec3 mapCheck = glm::ivec3(glm::floor(rayOrigin));  // Current grid cell
+    rayDir = glm::length(rayDir) > 0 ? glm::normalize(rayDir) : rayDir; // world dist
 
-    glm::vec3 nextBoundary = rayOrigin + (glm::ceil(rayOrigin) - rayOrigin) * rayStepSize;
-    glm::ivec3 stepDir = glm::ivec3(glm::sign(rayDir));  // Direction to step in each axis
-
-    float totalRayLength = 0.0f;  // Total distance traveled along the ray
-
-    while (totalRayLength < maxMarchLength) {
-        // Determine the axis along which the ray will next intersect a grid boundary
-        int k = 0;
-        if (nextBoundary.x < nextBoundary.y) {
-            if (nextBoundary.x < nextBoundary.z) k = 0;
-            else k = 2;
-        } else {
-            if (nextBoundary.y < nextBoundary.z) k = 1;
-            else k = 2;
-        }
-
-        // Move to the next grid cell
-        mapCheck[k] += stepDir[k];
-        totalRayLength = (nextBoundary[k] - rayOrigin[k]) * invRayDir[k];
-        nextBoundary[k] += rayStepSize[k];
-
-        if (terrain.getBlockAt(mapCheck.x, mapCheck.y, mapCheck.z) != EMPTY) {
-            *collisionDist = totalRayLength;
-            *collisionPoint = mapCheck;
-            return true;  // Collision detected
-        }
-    }
-
-    return false;  // No collision detected within maxMarchLength
-
-    /*
     glm::vec3 rayStepSize = glm::sign(rayDir) * glm::vec3(1.0f);
     glm::vec3 rayLength1D;
     glm::ivec3 mapCheck = glm::ivec3(rayOrigin);
@@ -205,9 +168,8 @@ bool Player::gridMarch(const Terrain &terrain,
         }
     }
 
-    float maxLength = glm::length(rayDir); // max distance the ray should check
     float currRayLength = 0; // how far along the ray we've traveled
-    while(currRayLength < maxLength){
+    while(currRayLength < maxMarchLength){
 
         if(terrain.getBlockAt(mapCheck.x, mapCheck.y, mapCheck.z) != EMPTY)
         {
@@ -236,10 +198,6 @@ bool Player::gridMarch(const Terrain &terrain,
             currRayLength += glm::abs(deltaDist.z);
             nextBoundary.z += rayStepSize.z;
         }
-    }
-    *collisionDist = maxLength;
-    return false; //no collision found within the max length
-    */
 
 }
 
