@@ -138,7 +138,6 @@ Chunk* Terrain::instantiateChunkAt(int x, int z) {
         cPtr->linkNeighbor(chunkWest, XNEG);
     }
     return cPtr;
-    return cPtr;
 }
 
 // TODO: When you make Chunk inherit from Drawable, change this code so
@@ -160,9 +159,9 @@ void Terrain::CreateTestScene()
 {
     //Current boundary for testing (will be changed after milestone2)
     int m_minX = 0;
-    int m_maxX = 64;
+    int m_maxX = 0;
     int m_minZ = 0;
-    int m_maxZ = 64;
+    int m_maxZ = 0;
 
     // Create the Chunks that will
     // store the blocks for our
@@ -241,7 +240,7 @@ void Terrain::check_edge(float x_f, float z_f)
     // check for four directions
     int x_bias, z_bias;
     x_bias = 0;
-    for (z_bias = -16; z_bias <= 16; z_bias += 32)
+    for (z_bias = -16; z_bias <= 16; z_bias += 32){
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
@@ -255,9 +254,10 @@ void Terrain::check_edge(float x_f, float z_f)
             }
             new_chunk->createVBOdata();
         }
+    }
 
     z_bias = 0;
-    for (x_bias = -16; x_bias <= 16; x_bias += 32)
+    for (x_bias = -16; x_bias <= 16; x_bias += 32){
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
@@ -271,6 +271,7 @@ void Terrain::check_edge(float x_f, float z_f)
             }
             new_chunk->createVBOdata();
         }
+    }
 
     if (new_chunk != nullptr)
     {
