@@ -8,7 +8,8 @@
 #include <stdio.h>
 #include <stdexcept>
 
-
+class Terrain;
+struct ChunkOpaqueTransparentVBOData;
 //using namespace std;
 
 // C++ 11 allows us to define the size of an enum. This lets us use only one byte
@@ -33,6 +34,19 @@ struct EnumHash {
     size_t operator()(T t) const {
         return static_cast<size_t>(t);
     }
+};
+
+//Leave for opaque and transparent data
+class Chunk;
+struct ChunkOpaqueTransparentVBOData {
+    Chunk* mp_chunk;
+    std::vector<glm::vec4> m_vboDataOpaque, m_vboDataTransparent;
+    std::vector<GLuint> m_idxDataOpaque, m_idxDataTransparent;
+
+    ChunkOpaqueTransparentVBOData(Chunk* c) :
+        mp_chunk(c), m_vboDataOpaque{}, m_vboDataTransparent{},
+        m_idxDataOpaque{}, m_idxDataTransparent{}
+    {}
 };
 
 // One Chunk is a 16 x 256 x 16 section of the world,
@@ -65,7 +79,6 @@ public:
     int is_boundary(int x, int y, int z) const;
 
     void createVBOdata() override;
-    void createBlockdata();
 
     ~Chunk() override {};
 
@@ -74,15 +87,6 @@ public:
     int get_minX(){return minX;}
     int get_minZ(){return minZ;}
 
-};
+    ChunkOpaqueTransparentVBOData vboData;
 
-struct ChunkVBOData {
-    Chunk* mp_chunk;
-    std::vector<glm::vec4> m_vboDataOpaque, m_vboDataTransparent;
-    std::vector<GLuint> m_idxDataOpaque, m_idxDataTransparent;
-
-    ChunkVBOData(Chunk* c) :
-        mp_chunk(c), m_vboDataOpaque{}, m_vboDataTransparent{},
-        m_idxDataOpaque{}, m_idxDataTransparent{}
-    {}
 };

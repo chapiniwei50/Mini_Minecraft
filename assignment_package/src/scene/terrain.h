@@ -1,7 +1,6 @@
 #pragma once
 #include "smartpointerhelp.h"
 #include "glm_includes.h"
-#include "chunk.h"
 #include <array>
 #include <unordered_map>
 #include <unordered_set>
@@ -11,6 +10,7 @@
 #include <QThreadPool>
 #include "shaderprogram.h"
 #include "chunkworkers.h"
+#include "chunk.h"
 
 namespace std {
 template<>
@@ -62,12 +62,11 @@ private:
 
     OpenGLContext* mp_context;
 
-    float PerlinNoise2D(float x, float z, float frequency, int octaves);
-    float PerlinNoise3D(glm::vec3 p);
-    float perlinNoiseSingle(glm::vec2 uv);
-    float WorleyNoise(float x, float y);
-    void getHeight(int x, int z, int& y, BiomeType& b);
-    void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
+    std::unordered_set<Chunk*> m_chunksThatHaveBlockData;
+    QMutex m_chunksThatHaveBlockDataLock;
+    std::vector<ChunkOpaqueTransparentVBOData> m_chunksThatHaveVBOs;
+    QMutex m_chunksThatHaveVBOsLock;
+    int m_chunkCreated;
 
 public:
     Terrain(OpenGLContext *context);
@@ -107,14 +106,20 @@ public:
     // check whether to add a new chunk when player is at x, z
     void check_edge(float x, float z);
 
-    Chunk* createChunkBlockData(int x, int z);
+    void createChunkBlockData(Chunk* c);
 
     // Multithreading for terrain update
     void multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos);
     std::unordered_set<int64_t> borderingZone(glm::ivec2 zone, int radius) const;
     void spawnVBOWorker(Chunk* c);
     void spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs);
-    void spawnBlockTypeWorkers(const QSet<int64_t> &zonesToGenerate);
     void spawnBlockTypeWorker(int64_t zone);
+
+    float PerlinNoise2D(float x, float z, float frequency, int octaves);
+    float PerlinNoise3D(glm::vec3 p);
+    float perlinNoiseSingle(glm::vec2 uv);
+    float WorleyNoise(float x, float y);
+    void getHeight(int x, int z, int& y, BiomeType& b);
+    void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
 
 };

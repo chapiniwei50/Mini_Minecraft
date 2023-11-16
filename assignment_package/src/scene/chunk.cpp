@@ -1,7 +1,7 @@
 #include "chunk.h"
 
 Chunk::Chunk(int x, int z, OpenGLContext* context)
-    : Drawable(context), m_blocks(), minX(x), minZ(z), m_neighbors{{XPOS, nullptr}, {XNEG, nullptr}, {ZPOS, nullptr}, {ZNEG, nullptr}}
+    : Drawable(context), m_blocks(), minX(x), minZ(z), m_neighbors{{XPOS, nullptr}, {XNEG, nullptr}, {ZPOS, nullptr}, {ZNEG, nullptr}}, vboData(this)
 {
     std::fill_n(m_blocks.begin(), 65536, EMPTY);
 }
@@ -268,7 +268,6 @@ void Chunk::createVBOdata()
     buff_data(pos_nor_color, idx);
 }
 
-
 void Chunk::buff_data(std::vector<glm::vec4> &pos_nor_color, std::vector<GLuint> &idx)
 {
     // buff vertex data and indices into proper VBOs.
@@ -283,6 +282,3 @@ void Chunk::buff_data(std::vector<glm::vec4> &pos_nor_color, std::vector<GLuint>
 
 }
 
-void createBlockdata(){
-
-}

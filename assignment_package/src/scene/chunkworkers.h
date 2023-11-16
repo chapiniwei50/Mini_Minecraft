@@ -1,10 +1,11 @@
+#pragma once
 #ifndef CHUNKWORKERS_H
 #define CHUNKWORKERS_H
-
 #include "chunk.h"
 #include <unordered_set>
 #include <QRunnable>
 #include <QMutex>
+#include "terrain.h"
 
 // BlockTypeWorkers
 class BlockGenerateWorker : public QRunnable {
@@ -14,9 +15,10 @@ private:
     std::vector<Chunk*> m_chunksToFill;
     std::unordered_set<Chunk*>* mp_chunksCompleted;
     QMutex* mp_chunksCompletedLock;
+    Terrain* m_terrain;
 public:
     BlockGenerateWorker(int x, int z, std::vector<Chunk*> chunksToFill,
-                        std::unordered_set<Chunk*>* chunksCompleted, QMutex* ChunksCompletedLock);
+                        std::unordered_set<Chunk*>* chunksCompleted, QMutex* ChunksCompletedLock, Terrain* m);
     void run() override;
 
 };
@@ -24,10 +26,12 @@ public:
 class VBOWorker : public QRunnable {
 private:
     Chunk* mp_chunk;
-    std::vector<ChunkVBOData>* mp_chunkVBOsCompleted;
+    std::vector<ChunkOpaqueTransparentVBOData>* mp_chunkVBOsCompleted;
     QMutex *mp_chunkVBOsCompletedLock;
+    Terrain* m_terrain;
+
 public:
-    VBOWorker(Chunk* c, std::vector<ChunkVBOData>* dat, QMutex * datLock);
+    VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData>* dat, QMutex * datLock, Terrain* m) ;
     void run() override;
 };
 

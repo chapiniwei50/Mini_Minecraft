@@ -62,7 +62,7 @@ BlockType Terrain::getBlockAt(int x, int y, int z) const
                              static_cast<unsigned int>(z - chunkOrigin.y));
     }
     else {
-       throw std::out_of_range("Coordinates " + std::to_string(x) +
+        throw std::out_of_range("Coordinates " + std::to_string(x) +
                                 " " + std::to_string(y) + " " +
                                 std::to_string(z) + " have no Chunk!");
     }
@@ -155,36 +155,6 @@ void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shader
     }
 }
 
-void Terrain::CreateTestScene()
-{
-    //ABANDONED FUNCTION
-
-    //Current boundary for testing (will be changed after milestone2)
-    int m_minX = 0;
-    int m_maxX = 0;
-    int m_minZ = 0;
-    int m_maxZ = 0;
-
-    // Create the Chunks that will
-    // store the blocks for our
-    // initial world space
-    for(int x = m_minX; x < m_maxX; x += 16) {
-        for(int z = m_minZ; z < m_maxZ; z += 16) {
-            instantiateChunkAt(x, z);
-        }
-    }
-    // Tell our existing terrain set that
-    // the "generated terrain zone" at (0,0)
-    // now exists.
-    m_generatedTerrain.insert(toKey(0, 0));
-
-    // for each chunk, create the vbo data
-    for (int x = m_minX; x < m_maxX; x += 16)
-        for (int z = m_minZ; z < m_maxZ; z += 16)
-            m_chunks[toKey(x, z)]->createVBOdata();
-
-}
-
 std::unordered_set<int64_t> Terrain::borderingZone(glm::ivec2 zone, int radius) const {
     int radiusInZoneScale = static_cast<int>(radius) * 64;
     std::unordered_set<int64_t> result;
@@ -223,11 +193,14 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
     }
 
     for (auto id : currentNearZones) {
+        //This zone id is ungenerated
         if (m_generatedTerrain.count(id) == 0) {
-            //This zone id is ungenerated
+
             spawnBlockTypeWorker(id);
-        } else if (previousNearZones.count(id) == 0) {
-            //This zone id is generated but it is not in the VBO
+        }
+
+        //This zone id is generated but it is not in the VBO
+        if (m_generatedTerrain.count(id) != 0 && previousNearZones.count(id) == 0) {
             glm::ivec2 coord = toCoords(id);
             for (int x = coord.x; x < coord.x + 64; x += 16) {
                 for (int z = coord.y; z < coord.y + 64; z += 16) {
@@ -236,7 +209,27 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
                 }
             }
         }
+
     }
+
+    m_chunksThatHaveBlockDataLock.lock();
+    spawnVBOWorkers(m_chunksThatHaveBlockData);
+    m_chunksThatHaveBlockData.clear();
+    m_chunksThatHaveBlockDataLock.unlock();
+
+    // Collect the Chunks that have been given VBO data
+    // by VBOWorkers and send that VBO data to the GPU
+    m_chunksThatHaveVBOsLock.lock();
+    for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
+        cd.mp_chunk->create(cd.m_vboDataOpaque, cd.m_idxDataOpaque,
+                            cd.m_vboDataTransparent, cd.m_idxDataTransparent);
+    }
+    if (m_chunkCreated < 25 * 4 * 4) {
+        m_chunkCreated += m_chunksThatHaveVBOs.size();
+    }
+    m_chunksThatHaveVBOs.clear();
+    m_chunksThatHaveVBOsLock.unlock();
+
 }
 
 void Terrain::spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs) {
@@ -246,15 +239,8 @@ void Terrain::spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBO
 }
 
 void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
-    VBOWorker* worker = new VBOWorker(chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock);
+    VBOWorker* worker = new VBOWorker(chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock, this);
     QThreadPool::globalInstance()->start(worker);
-}
-
-void Terrain::spawnBlockTypeWorkers(const QSet<int64_t> &zonesToGenerate) {
-    // Spawn worker threads to generate more Chunks
-    for (int64_t zone : zonesToGenerate) {
-        spawnBlockTypeWorker(zone);
-    }
 }
 
 void Terrain::spawnBlockTypeWorker(int64_t zone) {
@@ -270,23 +256,20 @@ void Terrain::spawnBlockTypeWorker(int64_t zone) {
             chunksToFill.push_back(c);
         }
     }
-    BlockGenerateWorker* worker = new BlockGenerateWorker(coord.x, coord.y, chunksToFill, &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock);
+    BlockGenerateWorker* worker = new BlockGenerateWorker(coord.x, coord.y, chunksToFill, &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock, this);
     QThreadPool::globalInstance()->start(worker);
     m_generatedTerrain.insert(zone);
 }
 
-Chunk* Terrain::createChunkBlockData(int x, int z){
-    Chunk* new_chunk = instantiateChunkAt(x, z);
-    for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
-        for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
+void Terrain::createChunkBlockData(Chunk* c){
+    for(int x = c->get_minX(); x < c->get_minX() + 16; ++x) {
+        for(int z = c->get_minZ(); z < c->get_minZ() + 16; ++z) {
             BiomeType biome;
             int height;
             getHeight(x,z,height,biome);
             fillTerrainBlocks(x, z, biome, height);
         }
     }
-    new_chunk->createVBOdata();
-    return new_chunk;
 }
 
 void Terrain::check_edge(float x_f, float z_f)
@@ -305,6 +288,7 @@ void Terrain::check_edge(float x_f, float z_f)
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
+
             for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
                 for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
                     BiomeType biome;
@@ -313,6 +297,7 @@ void Terrain::check_edge(float x_f, float z_f)
                     fillTerrainBlocks(x, z, biome, height);
                 }
             }
+
             new_chunk->createVBOdata();
         }
     }
@@ -514,8 +499,8 @@ glm::vec3 random3(glm::vec3 p) {
     // This should return a random glm::vec3 where each component is in the range [-1, 1]
     // Adjust the numbers for the dot product to suit your seed needs
     return glm::fract(glm::sin(glm::vec3(glm::dot(p, glm::vec3(127.1, 311.7, 74.7)),
-                                    glm::dot(p, glm::vec3(269.5, 183.3, 246.1)),
-                                    glm::dot(p, glm::vec3(113.5, 271.9, 124.6))))
+                                         glm::dot(p, glm::vec3(269.5, 183.3, 246.1)),
+                                         glm::dot(p, glm::vec3(113.5, 271.9, 124.6))))
                       * 43758.5453f) * 2.0f - 1.0f;
 }
 
@@ -539,3 +524,34 @@ float Terrain::PerlinNoise3D(glm::vec3 p) {
     }
     return surfletSum;
 }
+
+void Terrain::CreateTestScene()
+{
+    //ABANDONED FUNCTION
+
+    //Current boundary for testing (will be changed after milestone2)
+    int m_minX = 0;
+    int m_maxX = 0;
+    int m_minZ = 0;
+    int m_maxZ = 0;
+
+    // Create the Chunks that will
+    // store the blocks for our
+    // initial world space
+    for(int x = m_minX; x < m_maxX; x += 16) {
+        for(int z = m_minZ; z < m_maxZ; z += 16) {
+            instantiateChunkAt(x, z);
+        }
+    }
+    // Tell our existing terrain set that
+    // the "generated terrain zone" at (0,0)
+    // now exists.
+    m_generatedTerrain.insert(toKey(0, 0));
+
+    // for each chunk, create the vbo data
+    for (int x = m_minX; x < m_maxX; x += 16)
+        for (int z = m_minZ; z < m_maxZ; z += 16)
+            m_chunks[toKey(x, z)]->createVBOdata();
+
+}
+
