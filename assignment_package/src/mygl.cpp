@@ -99,16 +99,10 @@ void MyGL::tick() {
 
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     float deltaT = (currentTime - m_lastTime) * 0.001;
-    //std::cout<<"current time"<<currentTime<<std::endl;
-
-    //std::cout<<"my last time"<<m_lastTime<<std::endl;
-    //std::cout<<"delta time"<<deltaT<<std::endl;
     m_lastTime = currentTime;
     m_player.tick(deltaT, m_inputs);
-
-    m_terrain.check_edge(m_player.mcr_position.x, m_player.mcr_position.z);
-
-
+    //m_terrain.check_edge(m_player.mcr_position.x, m_player.mcr_position.z);
+    m_terrain.multithreadedTerrainUpdate(m_player.mcr_position, m_player.mcr_lastFramePosition);
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
     sendPlayerDataToGUI(); // Updates the info in the secondary window displaying player data
 

@@ -157,6 +157,8 @@ void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shader
 
 void Terrain::CreateTestScene()
 {
+    //ABANDONED FUNCTION
+
     //Current boundary for testing (will be changed after milestone2)
     int m_minX = 0;
     int m_maxX = 0;
@@ -183,49 +185,46 @@ void Terrain::CreateTestScene()
 
 }
 
-glm::vec2 random2(glm::vec2 p) {
-    return glm::fract(glm::sin(glm::vec2(glm::dot(p, glm::vec2(127.1, 311.7)),
-                                         glm::dot(p, glm::vec2(269.5,183.3))))
-                      * 43758.5453f);
-}
-
-float surflet(glm::vec2 P, glm::vec2 gridPoint) {
-    float distX = glm::abs(P.x - gridPoint.x);
-    float distY = glm::abs(P.y - gridPoint.y);
-    float tX = 1.f - 6.f * glm::pow(distX, 5.f) + 15.f * glm::pow(distX, 4.f) - 10.f * glm::pow(distX, 3.f);
-    float tY = 1.f - 6.f * glm::pow(distY, 5.f) + 15.f * glm::pow(distY, 4.f) - 10.f * glm::pow(distY, 3.f);
-    glm::vec2 gradient = 2.f * random2(gridPoint) - glm::vec2(1.f);
-    glm::vec2 diff = P - gridPoint;
-    float height = glm::dot(diff, gradient);
-    return height * tX * tY;
-}
-
-float Terrain::perlinNoiseSingle(glm::vec2 uv) {
-    float surfletSum = 0.f;
-    for(int dx = 0; dx <= 1; ++dx) {
-        for(int dy = 0; dy <= 1; ++dy) {
-            surfletSum += surflet(uv, glm::vec2((int)uv.x + dx, (int)uv.y + dy));
+std::set<glm::ivec2> Terrain::getChunksInRadius(const glm::ivec2& centerChunk, int radius) {
+    std::set<glm::ivec2> chunks;
+    for (int x = -radius; x <= radius; ++x) {
+        for (int z = -radius; z <= radius; ++z) {
+            glm::ivec2 currentChunk = centerChunk + glm::ivec2(x, z);
+            chunks.insert(currentChunk);
         }
     }
-    return surfletSum;
+    return chunks;
 }
 
-float Terrain::PerlinNoise2D(float x, float z, float frequency, int octaves) {
-    float amplitude = 1.0f;
-    float maxAmplitude = 0.0f;
-    float noise = 0.0f;
-    glm::vec2 uv(x, z);
 
-    for(int i = 0; i < octaves; i++) {
-        noise += perlinNoiseSingle(uv * frequency) * amplitude;
-        maxAmplitude += amplitude;
-        amplitude *= 0.5f;
-        frequency *= 2.0f;
+void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos)
+{
+    glm::ivec2 currentPlayerZone = glm::ivec2(floor(currentPlayerPos.x / 64), floor(currentPlayerPos.z / 64));
+    glm::ivec2 previousPlayerZone = glm::ivec2(floor(previousPlayerPos.x / 64), floor(previousPlayerPos.z / 64));
+
+    if(currentPlayerZone == previousPlayerZone){
+        return;
     }
 
-    noise /= maxAmplitude;
+    std::set<glm::ivec2> currentPlayerZoneChunks = getChunksInRadius(currentPlayerZone, 2);
+    std::set<glm::ivec2> previousPlayerZoneChunks = getChunksInRadius(previousPlayerZone, 2);
 
-    return noise;
+    for (const auto& zoneCoord : previousPlayerZoneChunks) {
+        if (currentPlayerZoneChunks.find(chunkCoord) == currentPlayerZoneChunks.end()) {
+            // The chunk is in the previous zone but not in the current zone
+            // Call the method to destroy this chunk's VBO data
+            // Ensure getChunkAt and destroyVBOdata are implemented appropriately
+            for (int x = zoneCoord.x * 64; x < zoneCoord.x * 64 + 64; x += 16) {
+                for (int z = zoneCoord.y * 64; z < zoneCoord.y * 64 + 64; z += 16) {
+                    auto& chunk = getChunkAt(x, z);
+                    chunk->destroyVBOdata();
+                }
+            }
+        }
+    }
+
+
+
 }
 
 void Terrain::check_edge(float x_f, float z_f)
@@ -369,6 +368,50 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     y = std::min(255, std::max(0, y));
 }
 
+glm::vec2 random2(glm::vec2 p) {
+    return glm::fract(glm::sin(glm::vec2(glm::dot(p, glm::vec2(127.1, 311.7)),
+                                         glm::dot(p, glm::vec2(269.5,183.3))))
+                      * 43758.5453f);
+}
+
+float surflet(glm::vec2 P, glm::vec2 gridPoint) {
+    float distX = glm::abs(P.x - gridPoint.x);
+    float distY = glm::abs(P.y - gridPoint.y);
+    float tX = 1.f - 6.f * glm::pow(distX, 5.f) + 15.f * glm::pow(distX, 4.f) - 10.f * glm::pow(distX, 3.f);
+    float tY = 1.f - 6.f * glm::pow(distY, 5.f) + 15.f * glm::pow(distY, 4.f) - 10.f * glm::pow(distY, 3.f);
+    glm::vec2 gradient = 2.f * random2(gridPoint) - glm::vec2(1.f);
+    glm::vec2 diff = P - gridPoint;
+    float height = glm::dot(diff, gradient);
+    return height * tX * tY;
+}
+
+float Terrain::perlinNoiseSingle(glm::vec2 uv) {
+    float surfletSum = 0.f;
+    for(int dx = 0; dx <= 1; ++dx) {
+        for(int dy = 0; dy <= 1; ++dy) {
+            surfletSum += surflet(uv, glm::vec2((int)uv.x + dx, (int)uv.y + dy));
+        }
+    }
+    return surfletSum;
+}
+
+float Terrain::PerlinNoise2D(float x, float z, float frequency, int octaves) {
+    float amplitude = 1.0f;
+    float maxAmplitude = 0.0f;
+    float noise = 0.0f;
+    glm::vec2 uv(x, z);
+
+    for(int i = 0; i < octaves; i++) {
+        noise += perlinNoiseSingle(uv * frequency) * amplitude;
+        maxAmplitude += amplitude;
+        amplitude *= 0.5f;
+        frequency *= 2.0f;
+    }
+
+    noise /= maxAmplitude;
+
+    return noise;
+}
 
 glm::vec2 fract(glm::vec2 v) {
     return glm::vec2(v.x - std::floor(v.x), v.y - std::floor(v.y));

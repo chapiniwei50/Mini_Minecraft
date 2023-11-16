@@ -3,9 +3,9 @@
 #include <iostream>
 
 Player::Player(glm::vec3 pos, const Terrain &terrain)
-    : Entity(pos), m_velocity(0,0,0), m_acceleration(0,0,0), m_cameraOrientation(0,0),
+    : Entity(pos), m_velocity(0,0,0), m_acceleration(0,0,0), m_cameraOrientation(0,0), m_lastFramePosition(0,0,0),
     m_camera(pos + glm::vec3(0, 1.5f, 0)), mcr_terrain(terrain),
-    mcr_camera(m_camera)
+    mcr_camera(m_camera), mcr_lastFramePosition(m_lastFramePosition)
 {}
 
 Player::~Player()
@@ -94,6 +94,7 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
     glm::vec3 rayDir = m_velocity * dT;
     terrain_collision_check(&rayDir, terrain);
 
+    m_lastFramePosition = m_position;
     this->moveAlongVector(rayDir);
     m_velocity += m_acceleration * dT;
 

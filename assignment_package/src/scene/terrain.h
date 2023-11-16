@@ -96,4 +96,10 @@ public:
 
     // check whether to add a new chunk when player is at x, z
     void check_edge(float x, float z);
+
+    // Multithreading for terrain update
+    void multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos);
+    std::set<glm::ivec2> getChunksInRadius(const glm::ivec2& centerChunk, int radius);
+
+
 };
