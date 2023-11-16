@@ -185,37 +185,36 @@ void Terrain::CreateTestScene()
 
 }
 
-std::set<glm::ivec2> Terrain::getChunksInRadius(const glm::ivec2& centerChunk, int radius) {
-    std::set<glm::ivec2> chunks;
-    for (int x = -radius; x <= radius; ++x) {
-        for (int z = -radius; z <= radius; ++z) {
-            glm::ivec2 currentChunk = centerChunk + glm::ivec2(x, z);
-            chunks.insert(currentChunk);
+std::unordered_set<int64_t> Terrain::borderingZone(glm::ivec2 zone, int radius) const {
+    int radiusInZoneScale = static_cast<int>(radius) * 64;
+    std::unordered_set<int64_t> result;
+    for (int i = -radiusInZoneScale; i <= radiusInZoneScale; i += 64) {
+        for (int j = -radiusInZoneScale; j <= radiusInZoneScale; j += 64) {
+            result.insert(toKey(zone.x + i, zone.y + j));
         }
     }
-    return chunks;
+    return result;
 }
-
 
 void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos)
 {
-    glm::ivec2 currentPlayerZone = glm::ivec2(floor(currentPlayerPos.x / 64), floor(currentPlayerPos.z / 64));
-    glm::ivec2 previousPlayerZone = glm::ivec2(floor(previousPlayerPos.x / 64), floor(previousPlayerPos.z / 64));
 
-    if(currentPlayerZone == previousPlayerZone){
+    const int zoneRadius = 2;
+    glm::ivec2 currentZone(64.f * glm::floor(currentPlayerPos.x / 64.f), 64.f * glm::floor(currentPlayerPos.z / 64.f));
+    glm::ivec2 previousZone(64.f * glm::floor(previousPlayerPos.x / 64.f), 64.f * glm::floor(previousPlayerPos.z / 64.f));
+
+    if(currentZone == previousZone){
         return;
     }
 
-    std::set<glm::ivec2> currentPlayerZoneChunks = getChunksInRadius(currentPlayerZone, 2);
-    std::set<glm::ivec2> previousPlayerZoneChunks = getChunksInRadius(previousPlayerZone, 2);
+    std::unordered_set<int64_t> currentNearZones = borderingZone(currentZone, zoneRadius);
+    std::unordered_set<int64_t> previousNearZones = borderingZone(previousZone, zoneRadius);
 
-    for (const auto& zoneCoord : previousPlayerZoneChunks) {
-        if (currentPlayerZoneChunks.find(chunkCoord) == currentPlayerZoneChunks.end()) {
-            // The chunk is in the previous zone but not in the current zone
-            // Call the method to destroy this chunk's VBO data
-            // Ensure getChunkAt and destroyVBOdata are implemented appropriately
-            for (int x = zoneCoord.x * 64; x < zoneCoord.x * 64 + 64; x += 16) {
-                for (int z = zoneCoord.y * 64; z < zoneCoord.y * 64 + 64; z += 16) {
+    for (auto id : previousNearZones) {
+        if (currentNearZones.count(id) == 0) {
+            glm::ivec2 coord = toCoords(id);
+            for (int x = coord.x; x < coord.x + 64; x += 16) {
+                for (int z = coord.y; z < coord.y + 64; z += 16) {
                     auto& chunk = getChunkAt(x, z);
                     chunk->destroyVBOdata();
                 }
@@ -223,8 +222,71 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
         }
     }
 
+    for (auto id : currentNearZones) {
+        if (m_generatedTerrain.count(id) == 0) {
+            //This zone id is ungenerated
+            spawnBlockTypeWorker(id);
+        } else if (previousNearZones.count(id) == 0) {
+            //This zone id is generated but it is not in the VBO
+            glm::ivec2 coord = toCoords(id);
+            for (int x = coord.x; x < coord.x + 64; x += 16) {
+                for (int z = coord.y; z < coord.y + 64; z += 16) {
+                    auto & chunk = getChunkAt(x, z);
+                    spawnVBOWorker(chunk.get());
+                }
+            }
+        }
+    }
+}
 
+void Terrain::spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs) {
+    for (Chunk* c: chunksNeedingVBOs) {
+        spawnVBOWorker(c);
+    }
+}
 
+void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
+    VBOWorker* worker = new VBOWorker(chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock);
+    QThreadPool::globalInstance()->start(worker);
+}
+
+void Terrain::spawnBlockTypeWorkers(const QSet<int64_t> &zonesToGenerate) {
+    // Spawn worker threads to generate more Chunks
+    for (int64_t zone : zonesToGenerate) {
+        spawnBlockTypeWorker(zone);
+    }
+}
+
+void Terrain::spawnBlockTypeWorker(int64_t zone) {
+    // For every terrain generation zone in this radius that does not yet exist in
+    // Terrain's m_generatedTerrain, you will spawn a thread to fill that zone's
+    // Chunks with procedural height field BlockType data.
+    // We will designate these threads as BlockTypeWorkers.
+    glm::ivec2 coord = toCoords(zone);
+    std::vector<Chunk*> chunksToFill;
+    for(int x = coord.x; x < coord.x + 64; x += 16) {
+        for(int z = coord.y; z < coord.y + 64; z += 16) {
+            Chunk* c = instantiateChunkAt(x, z);
+            chunksToFill.push_back(c);
+        }
+    }
+    BlockGenerateWorker* worker = new BlockGenerateWorker(coord.x, coord.y, chunksToFill, &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock);
+    QThreadPool::globalInstance()->start(worker);
+    m_generatedTerrain.insert(zone);
+}
+
+Chunk* Terrain::createChunkBlockData(int x, int z){
+    Chunk* new_chunk = instantiateChunkAt(x, z);
+    for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
+        for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
+            BiomeType biome;
+            int height;
+            getHeight(x,z,height,biome);
+            fillTerrainBlocks(x, z, biome, height);
+        }
+    }
+    new_chunk->createVBOdata();
+    return new_chunk;
 }
 
 void Terrain::check_edge(float x_f, float z_f)

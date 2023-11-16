@@ -2,7 +2,6 @@
 #include "smartpointerhelp.h"
 #include "glm_includes.h"
 #include "drawable.h"
-
 #include <array>
 #include <unordered_map>
 #include <cstddef>
@@ -66,6 +65,7 @@ public:
     int is_boundary(int x, int y, int z) const;
 
     void createVBOdata() override;
+    void createBlockdata();
 
     ~Chunk() override {};
 
@@ -74,4 +74,15 @@ public:
     int get_minX(){return minX;}
     int get_minZ(){return minZ;}
 
+};
+
+struct ChunkVBOData {
+    Chunk* mp_chunk;
+    std::vector<glm::vec4> m_vboDataOpaque, m_vboDataTransparent;
+    std::vector<GLuint> m_idxDataOpaque, m_idxDataTransparent;
+
+    ChunkVBOData(Chunk* c) :
+        mp_chunk(c), m_vboDataOpaque{}, m_vboDataTransparent{},
+        m_idxDataOpaque{}, m_idxDataTransparent{}
+    {}
 };

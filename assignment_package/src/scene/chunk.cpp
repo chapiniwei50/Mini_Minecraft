@@ -1,6 +1,5 @@
 #include "chunk.h"
 
-
 Chunk::Chunk(int x, int z, OpenGLContext* context)
     : Drawable(context), m_blocks(), minX(x), minZ(z), m_neighbors{{XPOS, nullptr}, {XNEG, nullptr}, {ZPOS, nullptr}, {ZNEG, nullptr}}
 {
@@ -284,22 +283,6 @@ void Chunk::buff_data(std::vector<glm::vec4> &pos_nor_color, std::vector<GLuint>
 
 }
 
+void createBlockdata(){
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}

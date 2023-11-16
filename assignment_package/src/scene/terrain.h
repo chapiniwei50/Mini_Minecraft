@@ -6,10 +6,20 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cmath>
+#include <QRunnable>
+#include <QMutex>
+#include <QThreadPool>
 #include "shaderprogram.h"
+#include "chunkworkers.h"
 
-
-//using namespace std;
+namespace std {
+template<>
+struct hash<glm::ivec2> {
+    size_t operator()(const glm::ivec2& k) const {
+        return std::hash<int>()(k.x) ^ (std::hash<int>()(k.y) << 1);
+    }
+};
+}
 
 // Helper functions to convert (x, z) to and from hash map key
 int64_t toKey(int x, int z);
@@ -97,9 +107,14 @@ public:
     // check whether to add a new chunk when player is at x, z
     void check_edge(float x, float z);
 
+    Chunk* createChunkBlockData(int x, int z);
+
     // Multithreading for terrain update
     void multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos);
-    std::set<glm::ivec2> getChunksInRadius(const glm::ivec2& centerChunk, int radius);
-
+    std::unordered_set<int64_t> borderingZone(glm::ivec2 zone, int radius) const;
+    void spawnVBOWorker(Chunk* c);
+    void spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs);
+    void spawnBlockTypeWorkers(const QSet<int64_t> &zonesToGenerate);
+    void spawnBlockTypeWorker(int64_t zone);
 
 };
