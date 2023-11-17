@@ -82,7 +82,7 @@ public:
 
     ~Chunk() override {};
 
-    void buff_data(std::vector<glm::vec4> &pos_nor_color, std::vector<GLuint> &idx);
+    void buff_data();
 
     int get_minX(){return minX;}
     int get_minZ(){return minZ;}

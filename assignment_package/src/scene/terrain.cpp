@@ -72,7 +72,7 @@ BlockType Terrain::getBlockAt(glm::vec3 p) const {
     return getBlockAt(p.x, p.y, p.z);
 }
 
-bool Terrain::hasChunkAt(int x, int z) const {
+bool Terrain::hasChunkAt(int x, int z) const{
     // Map x and z to their nearest Chunk corner
     // By flooring x and z, then multiplying by 16,
     // we clamp (x, z) to its nearest Chunk-space corner,
@@ -82,6 +82,7 @@ bool Terrain::hasChunkAt(int x, int z) const {
     // opposed to (int)(-1 / 16.f) giving us 0 (incorrect!).
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
+    QMutexLocker locker(&m_chunksMutex);
     return m_chunks.find(toKey(16 * xFloor, 16 * zFloor)) != m_chunks.end();
 }
 
@@ -89,6 +90,7 @@ bool Terrain::hasChunkAt(int x, int z) const {
 uPtr<Chunk>& Terrain::getChunkAt(int x, int z) {
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
+    QMutexLocker locker(&m_chunksMutex);
     return m_chunks[toKey(16 * xFloor, 16 * zFloor)];
 }
 
@@ -96,11 +98,13 @@ uPtr<Chunk>& Terrain::getChunkAt(int x, int z) {
 const uPtr<Chunk>& Terrain::getChunkAt(int x, int z) const {
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
+    QMutexLocker locker(&m_chunksMutex);
     return m_chunks.at(toKey(16 * xFloor, 16 * zFloor));
 }
 
 void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 {
+    QMutexLocker locker(&m_chunksMutex);
     if(hasChunkAt(x, z)) {
         uPtr<Chunk> &c = getChunkAt(x, z);
         glm::vec2 chunkOrigin = glm::vec2(floor(x / 16.f) * 16, floor(z / 16.f) * 16);
@@ -119,6 +123,7 @@ void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 Chunk* Terrain::instantiateChunkAt(int x, int z) {
     uPtr<Chunk> chunk = mkU<Chunk>(x, z, mp_context);
     Chunk *cPtr = chunk.get();
+    QMutexLocker locker(&m_chunksMutex);
     m_chunks[toKey(x, z)] = std::move(chunk);
     // Set the neighbor pointers of itself and its neighbors
     if(hasChunkAt(x, z + 16)) {
@@ -180,22 +185,9 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
     std::unordered_set<int64_t> currentNearZones = borderingZone(currentZone, zoneRadius);
     std::unordered_set<int64_t> previousNearZones = borderingZone(previousZone, zoneRadius);
 
-    for (auto id : previousNearZones) {
-        if (currentNearZones.count(id) == 0) {
-            glm::ivec2 coord = toCoords(id);
-            for (int x = coord.x; x < coord.x + 64; x += 16) {
-                for (int z = coord.y; z < coord.y + 64; z += 16) {
-                    auto& chunk = getChunkAt(x, z);
-                    chunk->destroyVBOdata();
-                }
-            }
-        }
-    }
-
     for (auto id : currentNearZones) {
         //This zone id is ungenerated
         if (m_generatedTerrain.count(id) == 0) {
-
             spawnBlockTypeWorker(id);
         }
 
@@ -212,17 +204,28 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
 
     }
 
+    for (auto id : previousNearZones) {
+        if (currentNearZones.count(id) == 0) {
+            glm::ivec2 coord = toCoords(id);
+            for (int x = coord.x; x < coord.x + 64; x += 16) {
+                for (int z = coord.y; z < coord.y + 64; z += 16) {
+                    auto& chunk = getChunkAt(x, z);
+                    if(chunk) chunk->destroyVBOdata();
+                }
+            }
+        }
+    }
+
+    // Send Chunks that have been processed by FBMWorkers to VBOWorkers for VBO data
     m_chunksThatHaveBlockDataLock.lock();
     spawnVBOWorkers(m_chunksThatHaveBlockData);
     m_chunksThatHaveBlockData.clear();
     m_chunksThatHaveBlockDataLock.unlock();
 
-    // Collect the Chunks that have been given VBO data
-    // by VBOWorkers and send that VBO data to the GPU
+    // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
     for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
-        cd.mp_chunk->create(cd.m_vboDataOpaque, cd.m_idxDataOpaque,
-                            cd.m_vboDataTransparent, cd.m_idxDataTransparent);
+        cd.mp_chunk->buff_data();
     }
     if (m_chunkCreated < 25 * 4 * 4) {
         m_chunkCreated += m_chunksThatHaveVBOs.size();

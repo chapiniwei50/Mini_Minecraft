@@ -264,21 +264,25 @@ void Chunk::createVBOdata()
 
     m_count = idx.size();
 
+    // opaque
+    vboData.m_vboDataOpaque = pos_nor_color;
+    vboData.m_idxDataOpaque = idx;
+
     // buff vertex data and indices into proper VBOs.
-    buff_data(pos_nor_color, idx);
+    // buff_data(pos_nor_color, idx);
+    // buff_data should be performed on the main thread as it directly communicate with OpenGL
 }
 
-void Chunk::buff_data(std::vector<glm::vec4> &pos_nor_color, std::vector<GLuint> &idx)
+void Chunk::buff_data()
 {
     // buff vertex data and indices into proper VBOs.
     generateIdx();
     mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdx);
-    mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, idx.size() * sizeof(GLuint), idx.data(), GL_STATIC_DRAW);
+    mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataOpaque.size() * sizeof(GLuint), vboData.m_idxDataOpaque.data(), GL_STATIC_DRAW);
 
     generateInterleaved();
     mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufInterleaved);
-    mp_context->glBufferData(GL_ARRAY_BUFFER, pos_nor_color.size() * sizeof(glm::vec4), pos_nor_color.data(), GL_STATIC_DRAW);
-
+    mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataOpaque.size() * sizeof(glm::vec4), vboData.m_vboDataOpaque.data(), GL_STATIC_DRAW);
 
 }
 

@@ -1,4 +1,5 @@
 #include "chunkworkers.h"
+#include <iostream>
 
 BlockGenerateWorker::BlockGenerateWorker(int x, int z, std::vector<Chunk*> chunksToFill,
                      std::unordered_set<Chunk*>* chunksCompleted, QMutex* ChunksCompletedLock, Terrain *m) :
@@ -7,11 +8,16 @@ BlockGenerateWorker::BlockGenerateWorker(int x, int z, std::vector<Chunk*> chunk
 {}
 
 void BlockGenerateWorker::run() {
-    for (auto &chunk : m_chunksToFill) {
-        m_terrain->createChunkBlockData(chunk);
-        mp_chunksCompletedLock->lock();
-        mp_chunksCompleted->insert(chunk);
-        mp_chunksCompletedLock->unlock();
+    try{
+        for (auto &chunk : m_chunksToFill) {
+            m_terrain->createChunkBlockData(chunk);
+            mp_chunksCompletedLock->lock();
+            mp_chunksCompleted->insert(chunk);
+            mp_chunksCompletedLock->unlock();
+        }
+    }
+    catch(const std::exception& e){
+        std::cout << "Exception in block generation:" << e.what() << std::endl;
     }
 }
 
@@ -20,8 +26,14 @@ VBOWorker::VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData>* dat, 
 {}
 
 void VBOWorker::run() {
-    mp_chunk->createVBOdata();
-    mp_chunkVBOsCompletedLock->lock();
-    mp_chunkVBOsCompleted->push_back(mp_chunk->vboData);
-    mp_chunkVBOsCompletedLock->unlock();
+    try{
+        mp_chunk->createVBOdata();
+        mp_chunkVBOsCompletedLock->lock();
+        mp_chunkVBOsCompleted->push_back(mp_chunk->vboData);
+        mp_chunkVBOsCompletedLock->unlock();
+    }
+    catch(const std::exception& e){
+        std::cout << "Exception in VBOWorker:" << e.what() << std::endl;
+    }
 }
+

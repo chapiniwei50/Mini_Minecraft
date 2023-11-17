@@ -67,6 +67,7 @@ private:
     std::vector<ChunkOpaqueTransparentVBOData> m_chunksThatHaveVBOs;
     QMutex m_chunksThatHaveVBOsLock;
     int m_chunkCreated;
+    mutable QMutex m_chunksMutex;
 
 public:
     Terrain(OpenGLContext *context);
