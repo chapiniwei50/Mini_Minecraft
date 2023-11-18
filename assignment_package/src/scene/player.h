@@ -1,4 +1,6 @@
 #pragma once
+
+#include <glm/glm.hpp>
 #include "entity.h"
 #include "camera.h"
 #include "terrain.h"

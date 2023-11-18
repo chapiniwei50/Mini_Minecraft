@@ -270,7 +270,7 @@ void Chunk::createVBOdata()
     vboData.m_idxDataOpaque = idx;
 
     // buff vertex data and indices into proper VBOs.
-    // buff_data(pos_nor_color, idx);
+    // buff_data();
     // buff_data should be performed on the main thread as it directly communicate with OpenGL
 }
 

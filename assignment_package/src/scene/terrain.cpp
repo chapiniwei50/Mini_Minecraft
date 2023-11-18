@@ -302,16 +302,7 @@ void Terrain::check_edge(float x_f, float z_f)
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
-
-            for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
-                for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-                    BiomeType biome;
-                    int height;
-                    getHeight(x,z,height,biome);
-                    fillTerrainBlocks(x, z, biome, height);
-                }
-            }
-
+            createChunkBlockData(new_chunk);
             new_chunk->createVBOdata();
         }
     }
@@ -321,14 +312,7 @@ void Terrain::check_edge(float x_f, float z_f)
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
-            for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
-                for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-                    BiomeType biome;
-                    int height;
-                    getHeight(x,z,height,biome);
-                    fillTerrainBlocks(x, z, biome, height);
-                }
-            }
+            createChunkBlockData(new_chunk);
             new_chunk->createVBOdata();
         }
     }

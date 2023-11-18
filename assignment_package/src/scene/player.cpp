@@ -92,7 +92,7 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
     }
     m_velocity *= friction;
     glm::vec3 rayDir = m_velocity * dT;
-    //terrain_collision_check(&rayDir, terrain);
+    terrain_collision_check(&rayDir, terrain);
 
     m_lastFramePosition = m_position;
     this->moveAlongVector(rayDir);
@@ -212,8 +212,6 @@ bool Player::gridMarch(glm::vec3 rayOrigin, glm::vec3 rayDirection, const Terrai
     return false;
 }
 
-#include <glm/glm.hpp>
-
 bool canPlaceBlock(const glm::ivec3& newBlockPos, const glm::vec3& playerPosition) {
     glm::vec3 playerSize(1.0f, 2.0f, 1.0f);
     glm::vec3 playerMin = playerPosition - playerSize / 2.0f;
@@ -249,6 +247,7 @@ void Player::addBlock(Terrain *terrain){
                 uPtr<Chunk>& chunk = terrain->getChunkAt(newBlockPos.x, newBlockPos.z);
                 chunk->destroyVBOdata();
                 chunk->createVBOdata();
+                chunk->buff_data();
             }
         }
     }
@@ -276,6 +275,7 @@ void Player::removeBlock(Terrain *terrain) {
             uPtr<Chunk>& chunk = terrain->getChunkAt(collHit.x, collHit.z);
             chunk->destroyVBOdata();
             chunk->createVBOdata();
+            chunk->buff_data();
         }
     }
 }
