@@ -82,29 +82,33 @@ bool Terrain::hasChunkAt(int x, int z) const{
     // opposed to (int)(-1 / 16.f) giving us 0 (incorrect!).
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
-    QMutexLocker locker(&m_chunksMutex);
-    return m_chunks.find(toKey(16 * xFloor, 16 * zFloor)) != m_chunks.end();
+
+    //QMutexLocker locker(&m_chunksMutex);
+    bool ret = m_chunks.find(toKey(16 * xFloor, 16 * zFloor)) != m_chunks.end();
+    return ret;
 }
 
 
 uPtr<Chunk>& Terrain::getChunkAt(int x, int z) {
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
-    QMutexLocker locker(&m_chunksMutex);
-    return m_chunks[toKey(16 * xFloor, 16 * zFloor)];
+    //QMutexLocker locker(&m_chunksMutex);
+    uPtr<Chunk>& ret = m_chunks[toKey(16 * xFloor, 16 * zFloor)];
+    return ret;
 }
 
 
 const uPtr<Chunk>& Terrain::getChunkAt(int x, int z) const {
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
-    QMutexLocker locker(&m_chunksMutex);
-    return m_chunks.at(toKey(16 * xFloor, 16 * zFloor));
+    //QMutexLocker locker(&m_chunksMutex);
+    const uPtr<Chunk>& ret = m_chunks.at(toKey(16 * xFloor, 16 * zFloor));
+    return ret;
 }
 
 void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 {
-    QMutexLocker locker(&m_chunksMutex);
+
     if(hasChunkAt(x, z)) {
         uPtr<Chunk> &c = getChunkAt(x, z);
         glm::vec2 chunkOrigin = glm::vec2(floor(x / 16.f) * 16, floor(z / 16.f) * 16);
@@ -118,28 +122,40 @@ void Terrain::setBlockAt(int x, int y, int z, BlockType t)
                                 " " + std::to_string(y) + " " +
                                 std::to_string(z) + " have no Chunk!");
     }
+
 }
 
 Chunk* Terrain::instantiateChunkAt(int x, int z) {
     uPtr<Chunk> chunk = mkU<Chunk>(x, z, mp_context);
     Chunk *cPtr = chunk.get();
-    QMutexLocker locker(&m_chunksMutex);
+    chunk->m_count = 0;
+
+    //QMutexLocker locker(&m_chunksMutex);
     m_chunks[toKey(x, z)] = std::move(chunk);
+    //locker.unlock();
     // Set the neighbor pointers of itself and its neighbors
     if(hasChunkAt(x, z + 16)) {
+        //locker.relock();
         auto &chunkNorth = m_chunks[toKey(x, z + 16)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkNorth, ZPOS);
     }
     if(hasChunkAt(x, z - 16)) {
+        //locker.relock();
         auto &chunkSouth = m_chunks[toKey(x, z - 16)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkSouth, ZNEG);
     }
     if(hasChunkAt(x + 16, z)) {
+        //locker.relock();
         auto &chunkEast = m_chunks[toKey(x + 16, z)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkEast, XPOS);
     }
     if(hasChunkAt(x - 16, z)) {
+        //locker.relock();
         auto &chunkWest = m_chunks[toKey(x - 16, z)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkWest, XNEG);
     }
     return cPtr;
@@ -216,7 +232,6 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
         }
     }
 
-    // Send Chunks that have been processed by FBMWorkers to VBOWorkers for VBO data
     m_chunksThatHaveBlockDataLock.lock();
     spawnVBOWorkers(m_chunksThatHaveBlockData);
     m_chunksThatHaveBlockData.clear();
@@ -228,7 +243,7 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
         cd.mp_chunk->buff_data();
     }
     if (m_chunkCreated < 25 * 4 * 4) {
-        m_chunkCreated += m_chunksThatHaveVBOs.size();
+       m_chunkCreated += m_chunksThatHaveVBOs.size();
     }
     m_chunksThatHaveVBOs.clear();
     m_chunksThatHaveVBOsLock.unlock();
@@ -247,10 +262,6 @@ void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
 }
 
 void Terrain::spawnBlockTypeWorker(int64_t zone) {
-    // For every terrain generation zone in this radius that does not yet exist in
-    // Terrain's m_generatedTerrain, you will spawn a thread to fill that zone's
-    // Chunks with procedural height field BlockType data.
-    // We will designate these threads as BlockTypeWorkers.
     glm::ivec2 coord = toCoords(zone);
     std::vector<Chunk*> chunksToFill;
     for(int x = coord.x; x < coord.x + 64; x += 16) {

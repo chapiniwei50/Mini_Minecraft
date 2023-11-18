@@ -27,6 +27,13 @@ enum Direction : unsigned char
     XPOS, XNEG, YPOS, YNEG, ZPOS, ZNEG
 };
 
+enum class BiomeType : unsigned char{
+    NULLBIOME,
+    DESSERT,
+    PLAIN,
+    MOUNTAIN
+};
+
 // Lets us use any enum class as the key of a
 // std::unordered_map
 struct EnumHash {
@@ -88,5 +95,26 @@ public:
     int get_minZ(){return minZ;}
 
     ChunkOpaqueTransparentVBOData vboData;
+    void createChunkBlockData();
+    void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
+    void getHeight(int x, int z, int& y, BiomeType& b);
+    float perlinNoiseSingle(glm::vec2 uv);
+    float PerlinNoise2D(float x, float z, float frequency, int octaves);
+    float WorleyNoise(float x, float y);
+    float PerlinNoise3D(glm::vec3 p);
+    glm::vec2 random2(glm::vec2 p);
+    float surflet(glm::vec2 P, glm::vec2 gridPoint);
+    glm::vec3 random3(glm::vec3 p);
+    float surflet(glm::vec3 p, glm::vec3 gridPoint);
+
+    glm::vec2 fract(glm::vec2 v);
+
+    glm::vec2 floor(glm::vec2 v);
+
+    float length(glm::vec2 v);
+
+    float min(float a, float b);
+
+    friend class Terrain;
 
 };

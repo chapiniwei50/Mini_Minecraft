@@ -92,7 +92,7 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
     }
     m_velocity *= friction;
     glm::vec3 rayDir = m_velocity * dT;
-    terrain_collision_check(&rayDir, terrain);
+    //terrain_collision_check(&rayDir, terrain);
 
     m_lastFramePosition = m_position;
     this->moveAlongVector(rayDir);

@@ -25,13 +25,6 @@ struct hash<glm::ivec2> {
 int64_t toKey(int x, int z);
 glm::ivec2 toCoords(int64_t k);
 
-enum class BiomeType : unsigned char{
-    NULLBIOME,
-    DESSERT,
-    PLAIN,
-    MOUNTAIN
-};
-
 // The container class for all of the Chunks in the game.
 // Ultimately, while Terrain will always store all Chunks,
 // not all Chunks will be drawn at any given time as the world
@@ -67,7 +60,7 @@ private:
     std::vector<ChunkOpaqueTransparentVBOData> m_chunksThatHaveVBOs;
     QMutex m_chunksThatHaveVBOsLock;
     int m_chunkCreated;
-    mutable QMutex m_chunksMutex;
+    //mutable QMutex m_chunksMutex;
 
 public:
     Terrain(OpenGLContext *context);

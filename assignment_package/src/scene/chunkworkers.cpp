@@ -10,7 +10,9 @@ BlockGenerateWorker::BlockGenerateWorker(int x, int z, std::vector<Chunk*> chunk
 void BlockGenerateWorker::run() {
     try{
         for (auto &chunk : m_chunksToFill) {
-            m_terrain->createChunkBlockData(chunk);
+            mp_chunksCompletedLock->lock();
+            mp_chunksCompletedLock->unlock();
+            chunk->createChunkBlockData();
             mp_chunksCompletedLock->lock();
             mp_chunksCompleted->insert(chunk);
             mp_chunksCompletedLock->unlock();
