@@ -62,7 +62,7 @@ BlockType Terrain::getBlockAt(int x, int y, int z) const
                              static_cast<unsigned int>(z - chunkOrigin.y));
     }
     else {
-       throw std::out_of_range("Coordinates " + std::to_string(x) +
+        throw std::out_of_range("Coordinates " + std::to_string(x) +
                                 " " + std::to_string(y) + " " +
                                 std::to_string(z) + " have no Chunk!");
     }
@@ -72,7 +72,7 @@ BlockType Terrain::getBlockAt(glm::vec3 p) const {
     return getBlockAt(p.x, p.y, p.z);
 }
 
-bool Terrain::hasChunkAt(int x, int z) const {
+bool Terrain::hasChunkAt(int x, int z) const{
     // Map x and z to their nearest Chunk corner
     // By flooring x and z, then multiplying by 16,
     // we clamp (x, z) to its nearest Chunk-space corner,
@@ -82,25 +82,33 @@ bool Terrain::hasChunkAt(int x, int z) const {
     // opposed to (int)(-1 / 16.f) giving us 0 (incorrect!).
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
-    return m_chunks.find(toKey(16 * xFloor, 16 * zFloor)) != m_chunks.end();
+
+    //QMutexLocker locker(&m_chunksMutex);
+    bool ret = m_chunks.find(toKey(16 * xFloor, 16 * zFloor)) != m_chunks.end();
+    return ret;
 }
 
 
 uPtr<Chunk>& Terrain::getChunkAt(int x, int z) {
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
-    return m_chunks[toKey(16 * xFloor, 16 * zFloor)];
+    //QMutexLocker locker(&m_chunksMutex);
+    uPtr<Chunk>& ret = m_chunks[toKey(16 * xFloor, 16 * zFloor)];
+    return ret;
 }
 
 
 const uPtr<Chunk>& Terrain::getChunkAt(int x, int z) const {
     int xFloor = static_cast<int>(glm::floor(x / 16.f));
     int zFloor = static_cast<int>(glm::floor(z / 16.f));
-    return m_chunks.at(toKey(16 * xFloor, 16 * zFloor));
+    //QMutexLocker locker(&m_chunksMutex);
+    const uPtr<Chunk>& ret = m_chunks.at(toKey(16 * xFloor, 16 * zFloor));
+    return ret;
 }
 
 void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 {
+
     if(hasChunkAt(x, z)) {
         uPtr<Chunk> &c = getChunkAt(x, z);
         glm::vec2 chunkOrigin = glm::vec2(floor(x / 16.f) * 16, floor(z / 16.f) * 16);
@@ -114,30 +122,42 @@ void Terrain::setBlockAt(int x, int y, int z, BlockType t)
                                 " " + std::to_string(y) + " " +
                                 std::to_string(z) + " have no Chunk!");
     }
+
 }
 
 Chunk* Terrain::instantiateChunkAt(int x, int z) {
     uPtr<Chunk> chunk = mkU<Chunk>(x, z, mp_context);
     Chunk *cPtr = chunk.get();
+    chunk->m_count = 0;
+
+    //QMutexLocker locker(&m_chunksMutex);
     m_chunks[toKey(x, z)] = std::move(chunk);
+    //locker.unlock();
     // Set the neighbor pointers of itself and its neighbors
     if(hasChunkAt(x, z + 16)) {
+        //locker.relock();
         auto &chunkNorth = m_chunks[toKey(x, z + 16)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkNorth, ZPOS);
     }
     if(hasChunkAt(x, z - 16)) {
+        //locker.relock();
         auto &chunkSouth = m_chunks[toKey(x, z - 16)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkSouth, ZNEG);
     }
     if(hasChunkAt(x + 16, z)) {
+        //locker.relock();
         auto &chunkEast = m_chunks[toKey(x + 16, z)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkEast, XPOS);
     }
     if(hasChunkAt(x - 16, z)) {
+        //locker.relock();
         auto &chunkWest = m_chunks[toKey(x - 16, z)];
+        //locker.unlock();
         cPtr->linkNeighbor(chunkWest, XNEG);
     }
-    return cPtr;
     return cPtr;
 }
 
@@ -156,77 +176,114 @@ void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shader
     }
 }
 
-void Terrain::CreateTestScene()
+std::unordered_set<int64_t> Terrain::borderingZone(glm::ivec2 zone, int radius) const {
+    int radiusInZoneScale = static_cast<int>(radius) * 64;
+    std::unordered_set<int64_t> result;
+    for (int i = -radiusInZoneScale; i <= radiusInZoneScale; i += 64) {
+        for (int j = -radiusInZoneScale; j <= radiusInZoneScale; j += 64) {
+            result.insert(toKey(zone.x + i, zone.y + j));
+        }
+    }
+    return result;
+}
+
+void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos)
 {
-    //Current boundary for testing (will be changed after milestone2)
-    int m_minX = 0;
-    int m_maxX = 64;
-    int m_minZ = 0;
-    int m_maxZ = 64;
 
-    // Create the Chunks that will
-    // store the blocks for our
-    // initial world space
-    for(int x = m_minX; x < m_maxX; x += 16) {
-        for(int z = m_minZ; z < m_maxZ; z += 16) {
-            instantiateChunkAt(x, z);
+    const int zoneRadius = 2;
+    glm::ivec2 currentZone(64.f * glm::floor(currentPlayerPos.x / 64.f), 64.f * glm::floor(currentPlayerPos.z / 64.f));
+    glm::ivec2 previousZone(64.f * glm::floor(previousPlayerPos.x / 64.f), 64.f * glm::floor(previousPlayerPos.z / 64.f));
+
+    if(currentZone == previousZone){
+        return;
+    }
+
+    std::unordered_set<int64_t> currentNearZones = borderingZone(currentZone, zoneRadius);
+    std::unordered_set<int64_t> previousNearZones = borderingZone(previousZone, zoneRadius);
+
+    for (auto id : currentNearZones) {
+        //This zone id is ungenerated
+        if (m_generatedTerrain.count(id) == 0) {
+            spawnBlockTypeWorker(id);
+        }
+
+        //This zone id is generated but it is not in the VBO
+        if (m_generatedTerrain.count(id) != 0 && previousNearZones.count(id) == 0) {
+            glm::ivec2 coord = toCoords(id);
+            for (int x = coord.x; x < coord.x + 64; x += 16) {
+                for (int z = coord.y; z < coord.y + 64; z += 16) {
+                    auto & chunk = getChunkAt(x, z);
+                    spawnVBOWorker(chunk.get());
+                }
+            }
+        }
+
+    }
+
+    for (auto id : previousNearZones) {
+        if (currentNearZones.count(id) == 0) {
+            glm::ivec2 coord = toCoords(id);
+            for (int x = coord.x; x < coord.x + 64; x += 16) {
+                for (int z = coord.y; z < coord.y + 64; z += 16) {
+                    auto& chunk = getChunkAt(x, z);
+                    if(chunk) chunk->destroyVBOdata();
+                }
+            }
         }
     }
-    // Tell our existing terrain set that
-    // the "generated terrain zone" at (0,0)
-    // now exists.
-    m_generatedTerrain.insert(toKey(0, 0));
 
-    // for each chunk, create the vbo data
-    for (int x = m_minX; x < m_maxX; x += 16)
-        for (int z = m_minZ; z < m_maxZ; z += 16)
-            m_chunks[toKey(x, z)]->createVBOdata();
+    m_chunksThatHaveBlockDataLock.lock();
+    spawnVBOWorkers(m_chunksThatHaveBlockData);
+    m_chunksThatHaveBlockData.clear();
+    m_chunksThatHaveBlockDataLock.unlock();
+
+    // Binding VBO data
+    m_chunksThatHaveVBOsLock.lock();
+    for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
+        cd.mp_chunk->buff_data();
+    }
+    if (m_chunkCreated < 25 * 4 * 4) {
+       m_chunkCreated += m_chunksThatHaveVBOs.size();
+    }
+    m_chunksThatHaveVBOs.clear();
+    m_chunksThatHaveVBOsLock.unlock();
 
 }
 
-glm::vec2 random2(glm::vec2 p) {
-    return glm::fract(glm::sin(glm::vec2(glm::dot(p, glm::vec2(127.1, 311.7)),
-                                         glm::dot(p, glm::vec2(269.5,183.3))))
-                      * 43758.5453f);
+void Terrain::spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs) {
+    for (Chunk* c: chunksNeedingVBOs) {
+        spawnVBOWorker(c);
+    }
 }
 
-float surflet(glm::vec2 P, glm::vec2 gridPoint) {
-    float distX = glm::abs(P.x - gridPoint.x);
-    float distY = glm::abs(P.y - gridPoint.y);
-    float tX = 1.f - 6.f * glm::pow(distX, 5.f) + 15.f * glm::pow(distX, 4.f) - 10.f * glm::pow(distX, 3.f);
-    float tY = 1.f - 6.f * glm::pow(distY, 5.f) + 15.f * glm::pow(distY, 4.f) - 10.f * glm::pow(distY, 3.f);
-    glm::vec2 gradient = 2.f * random2(gridPoint) - glm::vec2(1.f);
-    glm::vec2 diff = P - gridPoint;
-    float height = glm::dot(diff, gradient);
-    return height * tX * tY;
+void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
+    VBOWorker* worker = new VBOWorker(chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock, this);
+    QThreadPool::globalInstance()->start(worker);
 }
 
-float Terrain::perlinNoiseSingle(glm::vec2 uv) {
-    float surfletSum = 0.f;
-    for(int dx = 0; dx <= 1; ++dx) {
-        for(int dy = 0; dy <= 1; ++dy) {
-            surfletSum += surflet(uv, glm::vec2((int)uv.x + dx, (int)uv.y + dy));
+void Terrain::spawnBlockTypeWorker(int64_t zone) {
+    glm::ivec2 coord = toCoords(zone);
+    std::vector<Chunk*> chunksToFill;
+    for(int x = coord.x; x < coord.x + 64; x += 16) {
+        for(int z = coord.y; z < coord.y + 64; z += 16) {
+            Chunk* c = instantiateChunkAt(x, z);
+            chunksToFill.push_back(c);
         }
     }
-    return surfletSum;
+    BlockGenerateWorker* worker = new BlockGenerateWorker(coord.x, coord.y, chunksToFill, &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock, this);
+    QThreadPool::globalInstance()->start(worker);
+    m_generatedTerrain.insert(zone);
 }
 
-float Terrain::PerlinNoise2D(float x, float z, float frequency, int octaves) {
-    float amplitude = 1.0f;
-    float maxAmplitude = 0.0f;
-    float noise = 0.0f;
-    glm::vec2 uv(x, z);
-
-    for(int i = 0; i < octaves; i++) {
-        noise += perlinNoiseSingle(uv * frequency) * amplitude;
-        maxAmplitude += amplitude;
-        amplitude *= 0.5f;
-        frequency *= 2.0f;
+void Terrain::createChunkBlockData(Chunk* c){
+    for(int x = c->get_minX(); x < c->get_minX() + 16; ++x) {
+        for(int z = c->get_minZ(); z < c->get_minZ() + 16; ++z) {
+            BiomeType biome;
+            int height;
+            getHeight(x,z,height,biome);
+            fillTerrainBlocks(x, z, biome, height);
+        }
     }
-
-    noise /= maxAmplitude;
-
-    return noise;
 }
 
 void Terrain::check_edge(float x_f, float z_f)
@@ -241,36 +298,24 @@ void Terrain::check_edge(float x_f, float z_f)
     // check for four directions
     int x_bias, z_bias;
     x_bias = 0;
-    for (z_bias = -16; z_bias <= 16; z_bias += 32)
+    for (z_bias = -16; z_bias <= 16; z_bias += 32){
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
-            for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
-                for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-                    BiomeType biome;
-                    int height;
-                    getHeight(x,z,height,biome);
-                    fillTerrainBlocks(x, z, biome, height);
-                }
-            }
+            createChunkBlockData(new_chunk);
             new_chunk->createVBOdata();
         }
+    }
 
     z_bias = 0;
-    for (x_bias = -16; x_bias <= 16; x_bias += 32)
+    for (x_bias = -16; x_bias <= 16; x_bias += 32){
         if (! hasChunkAt(xFloor + x_bias, zFloor + z_bias))
         {
             new_chunk = instantiateChunkAt(xFloor + x_bias, zFloor + z_bias);
-            for(int x = new_chunk->get_minX(); x < new_chunk->get_minX() + 16; ++x) {
-                for(int z = new_chunk->get_minZ(); z < new_chunk->get_minZ() + 16; ++z) {
-                    BiomeType biome;
-                    int height;
-                    getHeight(x,z,height,biome);
-                    fillTerrainBlocks(x, z, biome, height);
-                }
-            }
+            createChunkBlockData(new_chunk);
             new_chunk->createVBOdata();
         }
+    }
 
     if (new_chunk != nullptr)
     {
@@ -368,6 +413,50 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     y = std::min(255, std::max(0, y));
 }
 
+glm::vec2 random2(glm::vec2 p) {
+    return glm::fract(glm::sin(glm::vec2(glm::dot(p, glm::vec2(127.1, 311.7)),
+                                         glm::dot(p, glm::vec2(269.5,183.3))))
+                      * 43758.5453f);
+}
+
+float surflet(glm::vec2 P, glm::vec2 gridPoint) {
+    float distX = glm::abs(P.x - gridPoint.x);
+    float distY = glm::abs(P.y - gridPoint.y);
+    float tX = 1.f - 6.f * glm::pow(distX, 5.f) + 15.f * glm::pow(distX, 4.f) - 10.f * glm::pow(distX, 3.f);
+    float tY = 1.f - 6.f * glm::pow(distY, 5.f) + 15.f * glm::pow(distY, 4.f) - 10.f * glm::pow(distY, 3.f);
+    glm::vec2 gradient = 2.f * random2(gridPoint) - glm::vec2(1.f);
+    glm::vec2 diff = P - gridPoint;
+    float height = glm::dot(diff, gradient);
+    return height * tX * tY;
+}
+
+float Terrain::perlinNoiseSingle(glm::vec2 uv) {
+    float surfletSum = 0.f;
+    for(int dx = 0; dx <= 1; ++dx) {
+        for(int dy = 0; dy <= 1; ++dy) {
+            surfletSum += surflet(uv, glm::vec2((int)uv.x + dx, (int)uv.y + dy));
+        }
+    }
+    return surfletSum;
+}
+
+float Terrain::PerlinNoise2D(float x, float z, float frequency, int octaves) {
+    float amplitude = 1.0f;
+    float maxAmplitude = 0.0f;
+    float noise = 0.0f;
+    glm::vec2 uv(x, z);
+
+    for(int i = 0; i < octaves; i++) {
+        noise += perlinNoiseSingle(uv * frequency) * amplitude;
+        maxAmplitude += amplitude;
+        amplitude *= 0.5f;
+        frequency *= 2.0f;
+    }
+
+    noise /= maxAmplitude;
+
+    return noise;
+}
 
 glm::vec2 fract(glm::vec2 v) {
     return glm::vec2(v.x - std::floor(v.x), v.y - std::floor(v.y));
@@ -408,8 +497,8 @@ glm::vec3 random3(glm::vec3 p) {
     // This should return a random glm::vec3 where each component is in the range [-1, 1]
     // Adjust the numbers for the dot product to suit your seed needs
     return glm::fract(glm::sin(glm::vec3(glm::dot(p, glm::vec3(127.1, 311.7, 74.7)),
-                                    glm::dot(p, glm::vec3(269.5, 183.3, 246.1)),
-                                    glm::dot(p, glm::vec3(113.5, 271.9, 124.6))))
+                                         glm::dot(p, glm::vec3(269.5, 183.3, 246.1)),
+                                         glm::dot(p, glm::vec3(113.5, 271.9, 124.6))))
                       * 43758.5453f) * 2.0f - 1.0f;
 }
 
@@ -433,3 +522,34 @@ float Terrain::PerlinNoise3D(glm::vec3 p) {
     }
     return surfletSum;
 }
+
+void Terrain::CreateTestScene()
+{
+    //ABANDONED FUNCTION
+
+    //Current boundary for testing (will be changed after milestone2)
+    int m_minX = 0;
+    int m_maxX = 0;
+    int m_minZ = 0;
+    int m_maxZ = 0;
+
+    // Create the Chunks that will
+    // store the blocks for our
+    // initial world space
+    for(int x = m_minX; x < m_maxX; x += 16) {
+        for(int z = m_minZ; z < m_maxZ; z += 16) {
+            instantiateChunkAt(x, z);
+        }
+    }
+    // Tell our existing terrain set that
+    // the "generated terrain zone" at (0,0)
+    // now exists.
+    m_generatedTerrain.insert(toKey(0, 0));
+
+    // for each chunk, create the vbo data
+    for (int x = m_minX; x < m_maxX; x += 16)
+        for (int z = m_minZ; z < m_maxZ; z += 16)
+            m_chunks[toKey(x, z)]->createVBOdata();
+
+}
+

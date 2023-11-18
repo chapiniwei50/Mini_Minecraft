@@ -1,26 +1,29 @@
 #pragma once
 #include "smartpointerhelp.h"
 #include "glm_includes.h"
-#include "chunk.h"
 #include <array>
 #include <unordered_map>
 #include <unordered_set>
 #include <cmath>
+#include <QRunnable>
+#include <QMutex>
+#include <QThreadPool>
 #include "shaderprogram.h"
+#include "chunkworkers.h"
+#include "chunk.h"
 
-
-//using namespace std;
+namespace std {
+template<>
+struct hash<glm::ivec2> {
+    size_t operator()(const glm::ivec2& k) const {
+        return std::hash<int>()(k.x) ^ (std::hash<int>()(k.y) << 1);
+    }
+};
+}
 
 // Helper functions to convert (x, z) to and from hash map key
 int64_t toKey(int x, int z);
 glm::ivec2 toCoords(int64_t k);
-
-enum class BiomeType : unsigned char{
-    NULLBIOME,
-    DESSERT,
-    PLAIN,
-    MOUNTAIN
-};
 
 // The container class for all of the Chunks in the game.
 // Ultimately, while Terrain will always store all Chunks,
@@ -52,12 +55,12 @@ private:
 
     OpenGLContext* mp_context;
 
-    float PerlinNoise2D(float x, float z, float frequency, int octaves);
-    float PerlinNoise3D(glm::vec3 p);
-    float perlinNoiseSingle(glm::vec2 uv);
-    float WorleyNoise(float x, float y);
-    void getHeight(int x, int z, int& y, BiomeType& b);
-    void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
+    std::unordered_set<Chunk*> m_chunksThatHaveBlockData;
+    QMutex m_chunksThatHaveBlockDataLock;
+    std::vector<ChunkOpaqueTransparentVBOData> m_chunksThatHaveVBOs;
+    QMutex m_chunksThatHaveVBOsLock;
+    int m_chunkCreated;
+    //mutable QMutex m_chunksMutex;
 
 public:
     Terrain(OpenGLContext *context);
@@ -96,4 +99,21 @@ public:
 
     // check whether to add a new chunk when player is at x, z
     void check_edge(float x, float z);
+
+    void createChunkBlockData(Chunk* c);
+
+    // Multithreading for terrain update
+    void multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos);
+    std::unordered_set<int64_t> borderingZone(glm::ivec2 zone, int radius) const;
+    void spawnVBOWorker(Chunk* c);
+    void spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs);
+    void spawnBlockTypeWorker(int64_t zone);
+
+    float PerlinNoise2D(float x, float z, float frequency, int octaves);
+    float PerlinNoise3D(glm::vec3 p);
+    float perlinNoiseSingle(glm::vec2 uv);
+    float WorleyNoise(float x, float y);
+    void getHeight(int x, int z, int& y, BiomeType& b);
+    void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
+
 };

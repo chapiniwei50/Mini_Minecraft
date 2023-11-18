@@ -1,11 +1,13 @@
 #pragma once
+
+#include <glm/glm.hpp>
 #include "entity.h"
 #include "camera.h"
 #include "terrain.h"
 
 class Player : public Entity {
 private:
-    glm::vec3 m_velocity, m_acceleration;
+    glm::vec3 m_velocity, m_acceleration, m_lastFramePosition;
     glm::vec2 m_cameraOrientation;
     Camera m_camera;
     const Terrain &mcr_terrain;
@@ -20,6 +22,7 @@ private:
 
 
 public:
+    const glm::vec3& mcr_lastFramePosition;
     // Readonly public reference to our camera
     // for easy access from MyGL
     const Camera& mcr_camera;
@@ -54,7 +57,6 @@ public:
     QString velAsQString() const;
     QString accAsQString() const;
     QString lookAsQString() const;
-
 
     void removeBlock(Terrain *terrain);
     void addBlock(Terrain *terrain);

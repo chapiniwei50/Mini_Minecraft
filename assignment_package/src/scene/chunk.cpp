@@ -1,8 +1,8 @@
 #include "chunk.h"
-
+#include <iostream>
 
 Chunk::Chunk(int x, int z, OpenGLContext* context)
-    : Drawable(context), m_blocks(), minX(x), minZ(z), m_neighbors{{XPOS, nullptr}, {XNEG, nullptr}, {ZPOS, nullptr}, {ZNEG, nullptr}}
+    : Drawable(context), m_blocks(), minX(x), minZ(z), m_neighbors{{XPOS, nullptr}, {XNEG, nullptr}, {ZPOS, nullptr}, {ZNEG, nullptr}}, vboData(this)
 {
     std::fill_n(m_blocks.begin(), 65536, EMPTY);
 }
@@ -65,12 +65,12 @@ int Chunk::is_boundary(int x, int y, int z) const
 
     // y neg face direction
     if (y == 0 ||
-       (y != 0 && getBlockAt(x, y - 1, z) == EMPTY))
+        (y != 0 && getBlockAt(x, y - 1, z) == EMPTY))
         res = res | 0b001000;
 
     // y pos face direction
     if (y == 255 ||
-       (y != 255 && getBlockAt(x, y + 1, z) == EMPTY))
+        (y != 255 && getBlockAt(x, y + 1, z) == EMPTY))
         res = res | 0b000100;
 
     // z neg face direction
@@ -265,41 +265,246 @@ void Chunk::createVBOdata()
 
     m_count = idx.size();
 
+    // opaque
+    vboData.m_vboDataOpaque = pos_nor_color;
+    vboData.m_idxDataOpaque = idx;
+
     // buff vertex data and indices into proper VBOs.
-    buff_data(pos_nor_color, idx);
+    // buff_data();
+    // buff_data should be performed on the main thread as it directly communicate with OpenGL
 }
 
-
-void Chunk::buff_data(std::vector<glm::vec4> &pos_nor_color, std::vector<GLuint> &idx)
+void Chunk::buff_data()
 {
     // buff vertex data and indices into proper VBOs.
     generateIdx();
     mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdx);
-    mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, idx.size() * sizeof(GLuint), idx.data(), GL_STATIC_DRAW);
+    mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataOpaque.size() * sizeof(GLuint), vboData.m_idxDataOpaque.data(), GL_STATIC_DRAW);
 
     generateInterleaved();
     mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufInterleaved);
-    mp_context->glBufferData(GL_ARRAY_BUFFER, pos_nor_color.size() * sizeof(glm::vec4), pos_nor_color.data(), GL_STATIC_DRAW);
-
+    mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataOpaque.size() * sizeof(glm::vec4), vboData.m_vboDataOpaque.data(), GL_STATIC_DRAW);
 
 }
 
+void Chunk::createChunkBlockData(){
+    for(int x = get_minX(); x < get_minX() + 16; ++x) {
+        for(int z = get_minZ(); z < get_minZ() + 16; ++z) {
+            BiomeType biome;
+            int height;
+            getHeight(x,z,height,biome);
+            fillTerrainBlocks(x, z, biome, height);
+        }
+    }
+}
+
+void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
+    // Convert to local axis.
+    x -= minX;
+    z -= minZ;
+    try {
+        for (int y = 0; y <= 128; ++y) {
+            setBlockAt(x, y, z, STONE);
+        }
+    }catch(std::exception &e) {
+        std::cout << "Exception in fillTerrainBlocks STONE fill" << std::endl;
+    }
+
+    // Based on biome, fill above y = 128
+    for (int y = 129; y <= height; ++y) {
+        try {
+            if (y == height) {
+                // Top block determination
+                if (biome == BiomeType::PLAIN) {
+                    setBlockAt(x, y, z, GRASS);
+                } else if (biome == BiomeType::MOUNTAIN) {
+                    setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
+                } else if (biome == BiomeType::DESSERT){
+                    setBlockAt(x, y, z, STONE);
+                }
+            } else {
+                // Filling other blocks
+                if (biome == BiomeType::PLAIN) {
+                    setBlockAt(x, y, z, DIRT);
+                } else if (biome == BiomeType::MOUNTAIN) {
+                    setBlockAt(x, y, z, STONE);
+                } else if (biome == BiomeType::DESSERT){
+                    setBlockAt(x, y, z, DIRT);
+                }
+            }
+        } catch(std::exception &e) {
+            std::cout << "Exception in fillTerrainBlocks y = [129, ?] loop, height = " << height << ", xz = " << x << "," << z << std::endl;
+        }
+    }
+
+    // Fill WATER if there's empty space between 128 and 138
+    for (int y = 129; y < 138; ++y) {
+        try {
+            if (getBlockAt(x, y, z) == EMPTY) {
+                setBlockAt(x, y, z, WATER);
+            }
+            else if(getBlockAt(x, y, z) == GRASS) {
+                setBlockAt(x, y, z, DIRT);
+            }
+        }catch(std::exception &e) {
+            std::cout << "Exception in fillTerrainBlocks WATER table, y = " << y << ", xz = " << x << "," << z << std::endl;
+        }
+    }
 
 
+    // Generate Cave (Optional, depending on your implementation)
+    /*
+    for (int y = 1; y < 32; ++y) {
+        float noiseValue = PerlinNoise3D(glm::vec3(x, y, z) * 0.05f);
+        if (noiseValue < 0 && getBlockAt(x, y, z) == STONE)  {
+            setBlockAt(x, y, z, EMPTY);
+        }
+        if (y < 25) {
+            // Change for future LAVA
+            setBlockAt(x, y, z, EMPTY);
+        }
+    }
+    */
+}
 
+void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
+    // Noise settings for biome determination and height variation.
+    const float biomeScale = 0.05f; // Larger scale for biome determination.
+    const float terrainScale = 0.01f; // Terrain variation scale.
+    const int baseHeight = 135;      // Base height for the terrain.
 
+    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.5 + 0.5;
 
+    float height = baseHeight;
 
+    // Determine the biome based on the biomeNoiseValue
+    if (biomeNoiseValue <= 0.5) { // Plains
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
+        b = BiomeType::PLAIN;
+    } else if (biomeNoiseValue >= 0.6 && biomeNoiseValue <= 0.8) { // Desert
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        b = BiomeType::DESSERT;
+    } else if (biomeNoiseValue > 0.8) { // Mountains
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
+        b = BiomeType::MOUNTAIN;
+    } else { // Transition between Plains and Desert
+        float plainsHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        float smoothStepInput = (biomeNoiseValue - 0.4f) / 0.3f;
+        float smoothStepResult = glm::smoothstep(0.25f, 0.75f, smoothStepInput);
+        height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
+        b = smoothStepResult < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
+    }
+    y = static_cast<int>(round(height));
+    y = std::min(255, std::max(0, y));
+}
 
+glm::vec2 Chunk::random2(glm::vec2 p) {
+    return glm::fract(glm::sin(glm::vec2(glm::dot(p, glm::vec2(127.1, 311.7)),
+                                         glm::dot(p, glm::vec2(269.5,183.3))))
+                      * 43758.5453f);
+}
 
+float Chunk::surflet(glm::vec2 P, glm::vec2 gridPoint) {
+    float distX = glm::abs(P.x - gridPoint.x);
+    float distY = glm::abs(P.y - gridPoint.y);
+    float tX = 1.f - 6.f * glm::pow(distX, 5.f) + 15.f * glm::pow(distX, 4.f) - 10.f * glm::pow(distX, 3.f);
+    float tY = 1.f - 6.f * glm::pow(distY, 5.f) + 15.f * glm::pow(distY, 4.f) - 10.f * glm::pow(distY, 3.f);
+    glm::vec2 gradient = 2.f * random2(gridPoint) - glm::vec2(1.f);
+    glm::vec2 diff = P - gridPoint;
+    float height = glm::dot(diff, gradient);
+    return height * tX * tY;
+}
 
+float Chunk::perlinNoiseSingle(glm::vec2 uv) {
+    float surfletSum = 0.f;
+    for(int dx = 0; dx <= 1; ++dx) {
+        for(int dy = 0; dy <= 1; ++dy) {
+            surfletSum += surflet(uv, glm::vec2((int)uv.x + dx, (int)uv.y + dy));
+        }
+    }
+    return surfletSum;
+}
 
+float Chunk::PerlinNoise2D(float x, float z, float frequency, int octaves) {
+    float amplitude = 1.0f;
+    float maxAmplitude = 0.0f;
+    float noise = 0.0f;
+    glm::vec2 uv(x, z);
 
+    for(int i = 0; i < octaves; i++) {
+        noise += perlinNoiseSingle(uv * frequency) * amplitude;
+        maxAmplitude += amplitude;
+        amplitude *= 0.5f;
+        frequency *= 2.0f;
+    }
 
+    noise /= maxAmplitude;
 
+    return noise;
+}
 
+glm::vec2 Chunk::fract(glm::vec2 v) {
+    return glm::vec2(v.x - std::floor(v.x), v.y - std::floor(v.y));
+}
 
+glm::vec2 Chunk::floor(glm::vec2 v) {
+    return glm::vec2(std::floor(v.x), std::floor(v.y));
+}
 
+float Chunk::length(glm::vec2 v) {
+    return std::sqrt(v.x * v.x + v.y * v.y);
+}
 
+float Chunk::min(float a, float b) {
+    return (a < b) ? a : b;
+}
 
+float Chunk::WorleyNoise(float x, float y) {
+    glm::vec2 uv(x * 10.0f, y * 10.0f);
+    glm::vec2 uvInt = floor(uv);
+    glm::vec2 uvFract = fract(uv);
+    float minDist = 1.0f;
 
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            glm::vec2 neighbor(x, y);
+            glm::vec2 point = random2(uvInt + neighbor);
+            glm::vec2 diff = neighbor + point - uvFract;
+            float dist = length(diff);
+            minDist = min(minDist, dist);
+        }
+    }
+
+    return minDist;
+}
+
+glm::vec3 Chunk::random3(glm::vec3 p) {
+    // This should return a random glm::vec3 where each component is in the range [-1, 1]
+    // Adjust the numbers for the dot product to suit your seed needs
+    return glm::fract(glm::sin(glm::vec3(glm::dot(p, glm::vec3(127.1, 311.7, 74.7)),
+                                         glm::dot(p, glm::vec3(269.5, 183.3, 246.1)),
+                                         glm::dot(p, glm::vec3(113.5, 271.9, 124.6))))
+                      * 43758.5453f) * 2.0f - 1.0f;
+}
+
+float Chunk::surflet(glm::vec3 p, glm::vec3 gridPoint) {
+    glm::vec3 t = glm::abs(p - gridPoint);
+    t = 1.f - 6.f * glm::pow(t, glm::vec3(5.0)) + 15.f * glm::pow(t, glm::vec3(4.0f)) - 10.f * glm::pow(t, glm::vec3(3.0f));
+    glm::vec3 gradient = random3(gridPoint);
+    glm::vec3 diff = p - gridPoint;
+    float height = glm::dot(diff, gradient);
+    return height * t.x * t.y * t.z;
+}
+
+float Chunk::PerlinNoise3D(glm::vec3 p) {
+    float surfletSum = 0.f;
+    for(int dx = 0; dx <= 1; ++dx) {
+        for(int dy = 0; dy <= 1; ++dy) {
+            for(int dz = 0; dz <= 1; ++dz) {
+                surfletSum += surflet(p, glm::floor(p) + glm::vec3(dx, dy, dz));
+            }
+        }
+    }
+    return surfletSum;
+}
