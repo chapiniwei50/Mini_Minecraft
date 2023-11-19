@@ -274,7 +274,7 @@ void Chunk::createVBOdata()
     // buff_data should be performed on the main thread as it directly communicate with OpenGL
 }
 
-void Chunk::buff_data()
+void Chunk::bindVBOdata()
 {
     // buff vertex data and indices into proper VBOs.
     generateIdx();
@@ -365,6 +365,20 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
         }
     }
     */
+}
+
+void Chunk::refreshChunkVBOData(){
+    destroyVBOdata();
+    createVBOdata();
+    bindVBOdata();
+}
+
+void Chunk::refreshAdjacentChunkVBOData(){
+
+    m_neighbors[XNEG]->refreshChunkVBOData();
+    m_neighbors[XPOS]->refreshChunkVBOData();
+    m_neighbors[ZNEG]->refreshChunkVBOData();
+    m_neighbors[ZPOS]->refreshChunkVBOData();
 }
 
 void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {

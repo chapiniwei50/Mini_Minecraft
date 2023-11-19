@@ -240,7 +240,7 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
     for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
-        cd.mp_chunk->buff_data();
+        cd.mp_chunk->bindVBOdata();
     }
     if (m_chunkCreated < 25 * 4 * 4) {
        m_chunkCreated += m_chunksThatHaveVBOs.size();

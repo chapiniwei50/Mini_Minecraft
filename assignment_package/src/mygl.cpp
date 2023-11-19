@@ -222,7 +222,18 @@ void MyGL::keyReleaseEvent(QKeyEvent *e) {
 }
 void MyGL::mouseMoveEvent(QMouseEvent *e) {
 
-//TODO:Fix the rotating angle problem.
+    QPoint mousePos = e->pos();
+    QPoint centerPos = QPoint(width() / 2, height() / 2);
+    if (this->hasFocus()){
+        m_inputs.mouseX = centerPos.x() - mousePos.x();
+        m_inputs.mouseY = centerPos.y() - mousePos.y();
+        moveMouseToCenter();
+    } else {
+        m_inputs.mouseX = 0;
+        m_inputs.mouseY = 0;
+    }
+
+/*
     float dx = e->pos().x() - lastMousePosition.x();
     float dy = e->pos().y() - lastMousePosition.y();
     lastMousePosition = e->pos();
@@ -232,12 +243,13 @@ void MyGL::mouseMoveEvent(QMouseEvent *e) {
 #ifdef Q_OS_MAC
     moveMouseToCenter();
 #endif
+*/
 
 }
 
 void MyGL::mousePressEvent(QMouseEvent *e) {
     if (e->button() == Qt::LeftButton) {
-        m_player.removeBlock(&m_terrain);
+        m_player.removeBlock();
     }
     if (e->button() == Qt::RightButton) {
         m_player.addBlock(&m_terrain);

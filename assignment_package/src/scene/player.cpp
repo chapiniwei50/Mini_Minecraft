@@ -2,7 +2,7 @@
 #include <QString>
 #include <iostream>
 
-Player::Player(glm::vec3 pos, const Terrain &terrain)
+Player::Player(glm::vec3 pos, Terrain &terrain)
     : Entity(pos), m_velocity(0,0,0), m_acceleration(0,0,0), m_cameraOrientation(0,0), m_lastFramePosition(0,0,0),
     m_camera(pos + glm::vec3(0, 1.5f, 0)), mcr_terrain(terrain),
     mcr_camera(m_camera), mcr_lastFramePosition(m_lastFramePosition)
@@ -21,22 +21,25 @@ void Player::processInputs(InputBundle &inputs) {
     float acc = 300.f;
     m_acceleration = glm::vec3(0);
 
+    if (inputs.wPressed) {
+        m_acceleration = acc * this->m_forward;
+    } else if (inputs.sPressed) {
+        m_acceleration = -acc * this->m_forward;
+    } else if (inputs.dPressed) {
+        m_acceleration = acc * this->m_right;
+    } else if (inputs.aPressed) {
+        m_acceleration = -acc * this->m_right;
+    }
+
     if(inputs.flight_mode){
-        if (inputs.wPressed) {
-            m_acceleration = acc * this->m_forward;
-        } else if (inputs.sPressed) {
-            m_acceleration = -acc * this->m_forward;
-        } else if (inputs.dPressed) {
-            m_acceleration = acc * this->m_right;
-        } else if (inputs.aPressed) {
-            m_acceleration = -acc * this->m_right;
-        } else if (inputs.ePressed) {
+        if (inputs.ePressed) {
             m_acceleration = acc * this->m_up;
         } else if (inputs.qPressed) {
             m_acceleration = -acc * this->m_up;
         }
     }
     else{
+        /*
         if (inputs.wPressed) {
             m_forward.y = 0;
             m_acceleration = acc * glm::normalize(glm::vec3(m_forward.x, 0, m_forward.z));
@@ -49,7 +52,8 @@ void Player::processInputs(InputBundle &inputs) {
         } else if (inputs.aPressed) {
             m_right.y = 0;
             m_acceleration = -acc * glm::normalize(glm::vec3(m_right.x, 0, m_right.z));
-        } else if (inputs.spacePressed) {
+        } else */
+        if (inputs.spacePressed) {
             m_velocity.y = 40.f;
         }
     }
@@ -58,7 +62,19 @@ void Player::processInputs(InputBundle &inputs) {
         return;
     }
 
+    auto clamp = [](float value, float minVal, float maxVal) -> float {
+        return std::max(minVal, std::min(value, maxVal));
+    };
 
+    glm::vec2 cameraOrientationOrigin = m_cameraOrientation;
+    float thetaChange = 2 * inputs.mouseX;
+    m_cameraOrientation.x = std::fmod(m_cameraOrientation.x + thetaChange, 360);
+    float phiChange = 2 * inputs.mouseY;
+    m_cameraOrientation.y = clamp(m_cameraOrientation.y + phiChange, -89.9999, 89.9999);
+    phiChange = m_cameraOrientation.y - cameraOrientationOrigin.y;
+
+    rotateOnUpGlobal(thetaChange);
+    rotateOnRightLocal(phiChange);
 
 }
 bool Player::isBlockAt( glm::vec3& position, const Terrain& terrain) {
@@ -157,7 +173,6 @@ void Player::terrain_collision_check(glm::vec3 *rayDir, const Terrain &terrain) 
     }
 }
 
-
 bool Player::gridMarch(glm::vec3 rayOrigin, glm::vec3 rayDirection, const Terrain &terrain, float *out_dist, glm::ivec3 *out_blockHit, glm::ivec3 *out_prevCell) {
     float maxLen = glm::length(rayDirection); // Farthest we search
     glm::ivec3 currCell = glm::ivec3(glm::floor(rayOrigin));
@@ -227,7 +242,6 @@ bool canPlaceBlock(const glm::ivec3& newBlockPos, const glm::vec3& playerPositio
     return noOverlapX || noOverlapY || noOverlapZ;
 }
 
-
 void Player::addBlock(Terrain *terrain){
     glm::vec3 corner = m_camera.mcr_position;
     glm::vec3 rayDir =  3.f *glm::normalize(this->m_forward);
@@ -242,22 +256,18 @@ void Player::addBlock(Terrain *terrain){
                 && canPlaceBlock(newBlockPos,m_position)) {
                 BlockType blockType = GRASS;
                 terrain->setBlockAt(newBlockPos.x, newBlockPos.y, newBlockPos.z, blockType);
-
                 // update chunk
                 uPtr<Chunk>& chunk = terrain->getChunkAt(newBlockPos.x, newBlockPos.z);
-                chunk->destroyVBOdata();
-                chunk->createVBOdata();
-                chunk->buff_data();
+                chunk->refreshChunkVBOData();
             }
         }
     }
 
 }
 
-void Player::removeBlock(Terrain *terrain) {
+void Player::removeBlock() {
 
     // Implement ray casting and grid marching to find and remove the block
-
     glm::vec3 corner = m_camera.mcr_position;
     glm::vec3 rayDir =  3.f *glm::normalize(this->m_forward);
     float maxDistance = 3.f;
@@ -265,17 +275,15 @@ void Player::removeBlock(Terrain *terrain) {
     float collDist;
     glm::ivec3 collHit;
 
-    if (gridMarch(corner, rayDir, *terrain, &collDist, &collHit)) {
+    if (gridMarch(corner, rayDir, mcr_terrain, &collDist, &collHit)) {
         if(collDist < maxDistance){
-
-            BlockType removedBlockType = terrain->getBlockAt(collHit.x, collHit.y, collHit.z);
-            // remove the block by setting its type to EMPTY
-            terrain->setBlockAt(collHit.x, collHit.y, collHit.z, EMPTY);
+            BlockType removedBlockType = mcr_terrain.getBlockAt(collHit.x, collHit.y, collHit.z);
+            // Store it for future use.
             // update the chunk containing this block
-            uPtr<Chunk>& chunk = terrain->getChunkAt(collHit.x, collHit.z);
-            chunk->destroyVBOdata();
-            chunk->createVBOdata();
-            chunk->buff_data();
+            uPtr<Chunk>& chunk = mcr_terrain.getChunkAt(collHit.x, collHit.z);
+            chunk->setBlockAt(collHit.x - chunk->get_minX(), collHit.y, collHit.z - chunk->get_minZ(), EMPTY);
+            chunk->refreshChunkVBOData();
+            chunk->refreshAdjacentChunkVBOData();
         }
     }
 }

@@ -65,6 +65,7 @@ struct ChunkOpaqueTransparentVBOData {
 
 // TODO have Chunk inherit from Drawable
 class Chunk : public Drawable {
+friend class Terrain;
 private:
     // All of the blocks contained within this Chunk
     std::array<BlockType, 65536> m_blocks;
@@ -85,17 +86,17 @@ public:
 
     int is_boundary(int x, int y, int z) const;
 
-    void createVBOdata() override;
-
     ~Chunk() override {};
 
-    void buff_data();
+    void bindVBOdata();
 
     int get_minX(){return minX;}
     int get_minZ(){return minZ;}
 
     ChunkOpaqueTransparentVBOData vboData;
     void createChunkBlockData();
+    void createVBOdata() override;
+
     void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
     void getHeight(int x, int z, int& y, BiomeType& b);
     float perlinNoiseSingle(glm::vec2 uv);
@@ -106,15 +107,11 @@ public:
     float surflet(glm::vec2 P, glm::vec2 gridPoint);
     glm::vec3 random3(glm::vec3 p);
     float surflet(glm::vec3 p, glm::vec3 gridPoint);
-
     glm::vec2 fract(glm::vec2 v);
-
     glm::vec2 floor(glm::vec2 v);
-
     float length(glm::vec2 v);
-
     float min(float a, float b);
 
-    friend class Terrain;
-
+    void refreshChunkVBOData();
+    void refreshAdjacentChunkVBOData();
 };

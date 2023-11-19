@@ -10,7 +10,7 @@ private:
     glm::vec3 m_velocity, m_acceleration, m_lastFramePosition;
     glm::vec2 m_cameraOrientation;
     Camera m_camera;
-    const Terrain &mcr_terrain;
+    Terrain &mcr_terrain;
 
     void processInputs(InputBundle &inputs);
     void computePhysics(float dT, const Terrain &terrain, InputBundle &input);
@@ -27,7 +27,7 @@ public:
     // for easy access from MyGL
     const Camera& mcr_camera;
 
-    Player(glm::vec3 pos, const Terrain &terrain);
+    Player(glm::vec3 pos, Terrain &terrain);
     virtual ~Player() override;
 
     void setCameraWidthHeight(unsigned int w, unsigned int h);
@@ -58,6 +58,6 @@ public:
     QString accAsQString() const;
     QString lookAsQString() const;
 
-    void removeBlock(Terrain *terrain);
+    void removeBlock();
     void addBlock(Terrain *terrain);
 };
