@@ -11,6 +11,10 @@
 #include "shaderprogram.h"
 #include "chunkworkers.h"
 #include "chunk.h"
+#include "texture.h"
+
+
+
 
 namespace std {
 template<>
@@ -62,6 +66,9 @@ private:
     int m_chunkCreated;
     //mutable QMutex m_chunksMutex;
 
+    // the texture that applies to all chunks
+    uPtr<Texture> mp_texture;
+
 public:
     Terrain(OpenGLContext *context);
     ~Terrain();
@@ -91,7 +98,7 @@ public:
     // Draws every Chunk that falls within the bounding box
     // described by the min and max coords, using the provided
     // ShaderProgram
-    void draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shaderProgram);
+    void draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shaderProgram, bool opaque);
 
     // Initializes the Chunks that store the 64 x 256 x 64 block scene you
     // see when the base code is run.
@@ -115,5 +122,8 @@ public:
     float WorleyNoise(float x, float y);
     void getHeight(int x, int z, int& y, BiomeType& b);
     void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
+
+    // init texture file
+    void create_load_texture(const char* textureFile);
 
 };
