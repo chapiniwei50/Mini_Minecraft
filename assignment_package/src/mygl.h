@@ -8,6 +8,10 @@
 #include "scene/terrain.h"
 #include "scene/player.h"
 #include "smartpointerhelp.h"
+#include "scene/quad.h"
+#include "framebuffer.h"
+
+
 
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
@@ -20,6 +24,8 @@ class MyGL : public OpenGLContext
 private:
     ShaderProgram m_progLambert;// A shader program that uses lambertian reflection
     ShaderProgram m_progFlat;// A shader program that uses "flat" reflection (no shadowing at all)
+    ShaderProgram m_WLoverlay; // A shader program for overlay of being underwater and underlava
+
 
     GLuint vao; // A handle for our vertex array object. This will store the VBOs created in our geometry classes.
         // Don't worry too much about this. Just know it is necessary in order to render geometry.
@@ -34,6 +40,8 @@ private:
 
     QPoint lastMousePosition;
     qint64 m_lastTime;
+    FrameBuffer m_frameBuffer;
+    Quad m_geomQuad;
 
     void moveMouseToCenter(); // Forces the mouse position to the screen's center. You should call this
         // from within a mouse move event after reading the mouse movement so that

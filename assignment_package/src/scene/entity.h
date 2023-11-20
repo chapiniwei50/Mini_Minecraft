@@ -2,7 +2,7 @@
 #include "glm_includes.h"
 
 struct InputBundle {
-    bool wPressed, aPressed, sPressed, dPressed,ePressed ,qPressed, fPressed, flight_mode;
+    bool wPressed, aPressed, sPressed, dPressed,ePressed ,qPressed, fPressed, flight_mode, isInLava, isInWater, isOnGround;
     bool spacePressed;
     float mouseX, mouseY;
 
@@ -10,7 +10,7 @@ struct InputBundle {
         : wPressed(false), aPressed(false), sPressed(false),
         dPressed(false), spacePressed(false), mouseX(0.f),
         mouseY(0.f), ePressed(false), qPressed (false),
-        fPressed(false), flight_mode(false)
+        fPressed(false), flight_mode(false),isInLava(false), isInWater(false), isOnGround(false)
     {}
 };
 

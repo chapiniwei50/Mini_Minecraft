@@ -11,7 +11,8 @@
 MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
     m_progLambert(this), m_progFlat(this),
-    m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch()),
+    m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch()),m_WLoverlay(this), m_geomQuad(this),
+    m_frameBuffer(this, this->width(), this->height(), this->devicePixelRatio()),
     m_time(0)
 {
     // Connect the timer to a function so that when the timer ticks the function is executed
@@ -27,6 +28,8 @@ MyGL::MyGL(QWidget *parent)
 MyGL::~MyGL() {
     makeCurrent();
     glDeleteVertexArrays(1, &vao);
+    m_frameBuffer.destroy();
+    m_geomQuad.destroyVBOdata();
 }
 
 
@@ -57,7 +60,9 @@ void MyGL::initializeGL()
 
     // Create a Vertex Attribute Object
     glGenVertexArrays(1, &vao);
-
+    m_geomQuad.createVBOdata();
+    m_frameBuffer.create();
+    m_WLoverlay.create(":/glsl/WLoverlay.vert.glsl", ":/glsl/WLoverlay.frag.glsl");
     // Create and set up the flat lighting shader
     m_progFlat.create(":/glsl/flat.vert.glsl", ":/glsl/flat.frag.glsl");
     // Create and set up the diffuse shader
@@ -91,6 +96,10 @@ void MyGL::resizeGL(int w, int h) {
 
     m_progLambert.setViewProjMatrix(viewproj);
     m_progFlat.setViewProjMatrix(viewproj);
+
+    m_frameBuffer.resize(this->width(), this->height(), this->devicePixelRatio());
+    m_frameBuffer.destroy();
+    m_frameBuffer.create();
 
     printGLErrorLog();
 }
@@ -149,6 +158,24 @@ void MyGL::paintGL() {
     m_progFlat.setModelMatrix(glm::mat4());
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     glEnable(GL_DEPTH_TEST);
+
+    if (m_terrain.m_chunks.size()>0 && m_player.isInWater(m_terrain, m_inputs)) {
+        std::cout<<"in water!"<<std::endl;
+        m_frameBuffer.bindFrameBuffer();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        m_WLoverlay.useMe();
+        m_WLoverlay.seteffectType(1);
+        m_frameBuffer.bindToTextureSlot(0);
+        std::cout<<glCheckFramebufferStatus(GL_FRAMEBUFFER)<<std::endl;
+
+        m_WLoverlay.drawEffect(m_geomQuad);
+    } else if (m_terrain.m_chunks.size()>0 &&m_player.isInLava(m_terrain, m_inputs)) {
+        m_WLoverlay.seteffectType(2);
+        m_frameBuffer.bindToTextureSlot(0);
+        m_WLoverlay.drawEffect(m_geomQuad);
+    } else {
+        m_WLoverlay.seteffectType(0);
+    }
 }
 
 // TODO: Change this so it renders the nine zones of generated

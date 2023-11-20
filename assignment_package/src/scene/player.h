@@ -33,6 +33,9 @@ public:
     void setCameraWidthHeight(unsigned int w, unsigned int h);
 
     void tick(float dT, InputBundle &input) override;
+     bool isInWater(const Terrain &terrain, InputBundle &input);
+    bool isInLava(const Terrain &terrain, InputBundle &input);
+
 
     // Player overrides all of Entity's movement
     // functions so that it transforms its camera

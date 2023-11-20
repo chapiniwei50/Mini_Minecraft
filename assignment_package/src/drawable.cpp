@@ -2,8 +2,8 @@
 #include <glm_includes.h>
 
 Drawable::Drawable(OpenGLContext* context)
-    : m_countOpq(-1), m_countTra(-1), m_bufIdxOpq(), m_bufIdxTra(), m_bufDataOpq(), m_bufDataTra(),
-    m_idxOpqGenerated(false), m_idxTraGenerated(false), m_bufDataOpqGenerated(false), m_bufDataTraGenerated(false),
+    : m_countOpq(-1), m_countTra(-1), m_bufIdxOpq(), m_bufIdxTra(), m_bufDataOpq(), m_bufDataTra(), m_bufUV(),m_bufPos(),
+    m_idxOpqGenerated(false), m_idxTraGenerated(false), m_bufDataOpqGenerated(false), m_bufDataTraGenerated(false), m_UVGenerated(false), m_PosGenerated(false),
       mp_context(context)
 {}
 
@@ -17,7 +17,10 @@ void Drawable::destroyVBOdata()
     mp_context->glDeleteBuffers(1, &m_bufIdxTra);
     mp_context->glDeleteBuffers(1, &m_bufDataOpq);
     mp_context->glDeleteBuffers(1, &m_bufDataTra);
-    m_idxOpqGenerated = m_idxTraGenerated = m_bufDataOpqGenerated = m_bufDataTraGenerated = false;
+    mp_context->glDeleteBuffers(1, &m_bufUV);
+    mp_context->glDeleteBuffers(1, &m_bufPos);
+
+    m_idxOpqGenerated = m_idxTraGenerated = m_bufDataOpqGenerated = m_bufDataTraGenerated = m_bufUV = m_bufPos = false;
     m_countOpq = m_countTra = -1;
 }
 
@@ -68,6 +71,18 @@ void Drawable::generateDataTra()
     mp_context->glGenBuffers(1, &m_bufDataTra);
 }
 
+void Drawable::generateUV()
+{
+    m_UVGenerated = true;
+    mp_context->glGenBuffers(1, &m_bufUV);
+}
+
+void Drawable::generatePos()
+{
+    m_PosGenerated = true;
+    mp_context->glGenBuffers(1, &m_bufPos);
+}
+
 bool Drawable::bindIdxOpq()
 {
     if(m_idxOpqGenerated) {
@@ -99,7 +114,22 @@ bool Drawable::bindDataTra()
     }
     return m_bufDataTraGenerated;
 }
+bool Drawable::bindUV()
+{
+    if(m_UVGenerated){
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufUV);
+    }
+    return m_UVGenerated;
+}
 
+
+bool Drawable::bindPos()
+{
+    if(m_PosGenerated){
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufPos);
+    }
+    return m_PosGenerated;
+}
 
 //InstancedDrawable::InstancedDrawable(OpenGLContext *context)
 //    : Drawable(context), m_numInstances(0), m_bufPosOffset(-1), m_offsetGenerated(false)

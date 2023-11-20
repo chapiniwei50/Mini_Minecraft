@@ -384,7 +384,7 @@ void Terrain::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
     }
 
     // Generate Cave (Optional, depending on your implementation)
-    /*
+
     for (int y = 1; y < 32; ++y) {
         float noiseValue = PerlinNoise3D(glm::vec3(x, y, z) * 0.05f);
         if (noiseValue < 0 && getBlockAt(x, y, z) == STONE)  {
@@ -395,7 +395,7 @@ void Terrain::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
             setBlockAt(x, y, z, EMPTY);
         }
     }
-    */
+
 }
 
 
