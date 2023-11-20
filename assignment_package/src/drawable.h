@@ -7,21 +7,18 @@
 class Drawable
 {
 protected:
-    int m_count;     // The number of indices stored in bufIdx.
-    GLuint m_bufIdx; // A Vertex Buffer Object that we will use to store triangle indices (GLuints)
-    GLuint m_bufPos; // A Vertex Buffer Object that we will use to store mesh vertices (vec4s)
-    GLuint m_bufNor; // A Vertex Buffer Object that we will use to store mesh normals (vec4s)
-    GLuint m_bufCol; // Can be used to pass per-vertex color information to the shader, but is currently unused.
-                   // Instead, we use a uniform vec4 in the shader to set an overall color for the geometry
-    GLuint m_bufInterleaved; // The interleaved data buffer
+    int m_countOpq;
+    int m_countTra;
+    GLuint m_bufIdxOpq; // A Vertex Buffer Object that we will use to store triangle indices (GLuints)
+    GLuint m_bufIdxTra;
+    GLuint m_bufDataOpq; // The interleaved data buffer
+    GLuint m_bufDataTra; // The interleaved data buffer
 
 
-    bool m_idxGenerated; // Set to TRUE by generateIdx(), returned by bindIdx().
-    bool m_posGenerated;
-    bool m_norGenerated;
-    bool m_colGenerated;
-
-    bool m_interleavedGenerated;
+    bool m_idxOpqGenerated; // Set to TRUE by generateIdx(), returned by bindIdx().
+    bool m_idxTraGenerated;
+    bool m_bufDataOpqGenerated;
+    bool m_bufDataTraGenerated;
 
     OpenGLContext* mp_context; // Since Qt's OpenGL support is done through classes like QOpenGLFunctions_3_2_Core,
                           // we need to pass our OpenGL context to the Drawable in order to call GL functions
@@ -37,23 +34,22 @@ public:
 
     // Getter functions for various GL data
     virtual GLenum drawMode();
-    int elemCount();
+    int elemOpqCount();
+    int elemTraCount();
 
     // Call these functions when you want to call glGenBuffers on the buffers stored in the Drawable
     // These will properly set the values of idxBound etc. which need to be checked in ShaderProgram::draw()
-    void generateIdx();
-    void generatePos();
-    void generateNor();
-    void generateCol();
+    void generateIdxOpq();
+    void generateIdxTra();
 
-    void generateInterleaved();
+    void generateDataOpq();
+    void generateDataTra();
 
-    bool bindIdx();
-    bool bindPos();
-    bool bindNor();
-    bool bindCol();
+    bool bindIdxOpq();
+    bool bindIdxTra();
 
-    bool bindInterleaved();
+    bool bindDataOpq();
+    bool bindDataTra();
 };
 
 // A subclass of Drawable that enables the base code to render duplicates of
@@ -61,22 +57,23 @@ public:
 // You will not have need for this class when completing the base requirements
 // for Mini Minecraft, but you might consider using instanced rendering for
 // some of the milestone 3 ideas.
-class InstancedDrawable : public Drawable {
-protected:
-    int m_numInstances;
-    GLuint m_bufPosOffset;
 
-    bool m_offsetGenerated;
+//class InstancedDrawable : public Drawable {
+//protected:
+//    int m_numInstances;
+//    GLuint m_bufPosOffset;
 
-public:
-    InstancedDrawable(OpenGLContext* mp_context);
-    virtual ~InstancedDrawable();
-    int instanceCount() const;
+//    bool m_offsetGenerated;
 
-    void generateOffsetBuf();
-    bool bindOffsetBuf();
-    void clearOffsetBuf();
-    void clearColorBuf();
+//public:
+//    InstancedDrawable(OpenGLContext* mp_context);
+//    virtual ~InstancedDrawable();
+//    int instanceCount() const;
 
-    virtual void createInstancedVBOdata(std::vector<glm::vec3> &offsets, std::vector<glm::vec3> &colors) = 0;
-};
+//    void generateOffsetBuf();
+//    bool bindOffsetBuf();
+//    void clearOffsetBuf();
+//    void clearColorBuf();
+
+//    virtual void createInstancedVBOdata(std::vector<glm::vec3> &offsets, std::vector<glm::vec3> &colors) = 0;
+//};

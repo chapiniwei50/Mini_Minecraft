@@ -1,10 +1,9 @@
 #include "terrain.h"
-#include "cube.h"
 #include <stdexcept>
 #include <iostream>
 
 Terrain::Terrain(OpenGLContext *context)
-    : m_chunks(), m_generatedTerrain(), mp_context(context)
+    : m_chunks(), m_generatedTerrain(), mp_context(context), mp_texture(nullptr)
 {}
 
 Terrain::~Terrain() {
@@ -128,7 +127,8 @@ void Terrain::setBlockAt(int x, int y, int z, BlockType t)
 Chunk* Terrain::instantiateChunkAt(int x, int z) {
     uPtr<Chunk> chunk = mkU<Chunk>(x, z, mp_context);
     Chunk *cPtr = chunk.get();
-    chunk->m_count = 0;
+    chunk->m_countOpq = 0;
+    chunk->m_countTra = 0;
 
     //QMutexLocker locker(&m_chunksMutex);
     m_chunks[toKey(x, z)] = std::move(chunk);
@@ -164,13 +164,18 @@ Chunk* Terrain::instantiateChunkAt(int x, int z) {
 // TODO: When you make Chunk inherit from Drawable, change this code so
 // it draws each Chunk with the given ShaderProgram, remembering to set the
 // model matrix to the proper X and Z translation!
-void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shaderProgram)
+void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shaderProgram, bool opaque)
 {
+    // bind the texture
+    mp_texture->bind(0);
+
+    // need optimize!
+    // only draw chunk that has vbo data and within visible range!
     for(int x = minX; x < maxX; x += 16) {
         for(int z = minZ; z < maxZ; z += 16) {
             if (hasChunkAt(x, z)){
                 const uPtr<Chunk> &chunk = getChunkAt(x, z);
-                shaderProgram->drawInterleaved(chunk.get());
+                shaderProgram->drawInterleaved(chunk.get(), opaque);
             }
         }
     }
@@ -216,6 +221,8 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
                     spawnVBOWorker(chunk.get());
                 }
             }
+            // wait for all vbo works to finish
+            QThreadPool::globalInstance()->waitForDone();
         }
 
     }
@@ -254,6 +261,7 @@ void Terrain::spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBO
     for (Chunk* c: chunksNeedingVBOs) {
         spawnVBOWorker(c);
     }
+    QThreadPool::globalInstance()->waitForDone();
 }
 
 void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
@@ -270,8 +278,13 @@ void Terrain::spawnBlockTypeWorker(int64_t zone) {
             chunksToFill.push_back(c);
         }
     }
+    // TODO: here should for each chunk, start a thread. and then wait for done
     BlockGenerateWorker* worker = new BlockGenerateWorker(coord.x, coord.y, chunksToFill, &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock, this);
     QThreadPool::globalInstance()->start(worker);
+    if (QThreadPool::globalInstance()->waitForDone() == false)
+    {
+        throw std::out_of_range("Waiting threads finish failed!");
+    }
     m_generatedTerrain.insert(zone);
 }
 
@@ -552,4 +565,13 @@ void Terrain::CreateTestScene()
             m_chunks[toKey(x, z)]->createVBOdata();
 
 }
+
+
+void Terrain::create_load_texture(const char* textureFile)
+{
+    mp_texture = mkU<Texture>(mp_context);
+    mp_texture->create(textureFile);
+    mp_texture->load(0);
+}
+
 

@@ -2,8 +2,8 @@
 #include <glm_includes.h>
 
 Drawable::Drawable(OpenGLContext* context)
-    : m_count(-1), m_bufIdx(), m_bufPos(), m_bufNor(), m_bufCol(), m_bufInterleaved(),
-    m_idxGenerated(false), m_posGenerated(false), m_norGenerated(false), m_colGenerated(false), m_interleavedGenerated(false),
+    : m_countOpq(-1), m_countTra(-1), m_bufIdxOpq(), m_bufIdxTra(), m_bufDataOpq(), m_bufDataTra(),
+    m_idxOpqGenerated(false), m_idxTraGenerated(false), m_bufDataOpqGenerated(false), m_bufDataTraGenerated(false),
       mp_context(context)
 {}
 
@@ -13,13 +13,12 @@ Drawable::~Drawable()
 
 void Drawable::destroyVBOdata()
 {
-    mp_context->glDeleteBuffers(1, &m_bufIdx);
-    mp_context->glDeleteBuffers(1, &m_bufPos);
-    mp_context->glDeleteBuffers(1, &m_bufNor);
-    mp_context->glDeleteBuffers(1, &m_bufCol);
-    mp_context->glDeleteBuffers(1, &m_bufInterleaved);
-    m_idxGenerated = m_posGenerated = m_norGenerated = m_colGenerated = m_interleavedGenerated = false;
-    m_count = -1;
+    mp_context->glDeleteBuffers(1, &m_bufIdxOpq);
+    mp_context->glDeleteBuffers(1, &m_bufIdxTra);
+    mp_context->glDeleteBuffers(1, &m_bufDataOpq);
+    mp_context->glDeleteBuffers(1, &m_bufDataTra);
+    m_idxOpqGenerated = m_idxTraGenerated = m_bufDataOpqGenerated = m_bufDataTraGenerated = false;
+    m_countOpq = m_countTra = -1;
 }
 
 GLenum Drawable::drawMode()
@@ -33,117 +32,107 @@ GLenum Drawable::drawMode()
     return GL_TRIANGLES;
 }
 
-int Drawable::elemCount()
+int Drawable::elemOpqCount()
 {
-    return m_count;
+    return m_countOpq;
 }
 
-void Drawable::generateIdx()
+int Drawable::elemTraCount()
 {
-    m_idxGenerated = true;
+    return m_countTra;
+}
+
+void Drawable::generateIdxOpq()
+{
+    m_idxOpqGenerated = true;
     // Create a VBO on our GPU and store its handle in bufIdx
-    mp_context->glGenBuffers(1, &m_bufIdx);
+    mp_context->glGenBuffers(1, &m_bufIdxOpq);
 }
 
-void Drawable::generatePos()
+void Drawable::generateIdxTra()
 {
-    m_posGenerated = true;
-    // Create a VBO on our GPU and store its handle in bufPos
-    mp_context->glGenBuffers(1, &m_bufPos);
+    m_idxTraGenerated = true;
+    // Create a VBO on our GPU and store its handle in bufIdx
+    mp_context->glGenBuffers(1, &m_bufIdxTra);
 }
 
-void Drawable::generateNor()
+void Drawable::generateDataOpq()
 {
-    m_norGenerated = true;
-    // Create a VBO on our GPU and store its handle in bufNor
-    mp_context->glGenBuffers(1, &m_bufNor);
+    m_bufDataOpqGenerated = true;
+    mp_context->glGenBuffers(1, &m_bufDataOpq);
 }
 
-void Drawable::generateCol()
+void Drawable::generateDataTra()
 {
-    m_colGenerated = true;
-    // Create a VBO on our GPU and store its handle in bufCol
-    mp_context->glGenBuffers(1, &m_bufCol);
+    m_bufDataTraGenerated = true;
+    mp_context->glGenBuffers(1, &m_bufDataTra);
 }
 
-void Drawable::generateInterleaved()
+bool Drawable::bindIdxOpq()
 {
-    m_interleavedGenerated = true;
-    mp_context->glGenBuffers(1, &m_bufInterleaved);
-}
-
-bool Drawable::bindIdx()
-{
-    if(m_idxGenerated) {
-        mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdx);
+    if(m_idxOpqGenerated) {
+        mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxOpq);
     }
-    return m_idxGenerated;
+    return m_idxOpqGenerated;
 }
 
-bool Drawable::bindPos()
+bool Drawable::bindIdxTra()
 {
-    if(m_posGenerated){
-        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufPos);
+    if(m_idxTraGenerated) {
+        mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxTra);
     }
-    return m_posGenerated;
+    return m_idxTraGenerated;
 }
 
-bool Drawable::bindNor()
+bool Drawable::bindDataOpq()
 {
-    if(m_norGenerated){
-        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufNor);
+    if(m_bufDataOpqGenerated){
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataOpq);
     }
-    return m_norGenerated;
+    return m_bufDataOpqGenerated;
 }
 
-bool Drawable::bindCol()
+bool Drawable::bindDataTra()
 {
-    if(m_colGenerated){
-        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufCol);
+    if(m_bufDataTraGenerated){
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataTra);
     }
-    return m_colGenerated;
-}
-
-bool Drawable::bindInterleaved()
-{
-    if(m_interleavedGenerated){
-        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufInterleaved);
-    }
-    return m_interleavedGenerated;
-}
-
-InstancedDrawable::InstancedDrawable(OpenGLContext *context)
-    : Drawable(context), m_numInstances(0), m_bufPosOffset(-1), m_offsetGenerated(false)
-{}
-
-InstancedDrawable::~InstancedDrawable(){}
-
-int InstancedDrawable::instanceCount() const {
-    return m_numInstances;
-}
-
-void InstancedDrawable::generateOffsetBuf() {
-    m_offsetGenerated = true;
-    mp_context->glGenBuffers(1, &m_bufPosOffset);
-}
-
-bool InstancedDrawable::bindOffsetBuf() {
-    if(m_offsetGenerated){
-        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufPosOffset);
-    }
-    return m_offsetGenerated;
+    return m_bufDataTraGenerated;
 }
 
 
-void InstancedDrawable::clearOffsetBuf() {
-    if(m_offsetGenerated) {
-        mp_context->glDeleteBuffers(1, &m_bufPosOffset);
-        m_offsetGenerated = false;
-    }
-}
-void InstancedDrawable::clearColorBuf() {
-    if(m_colGenerated) {
-        mp_context->glDeleteBuffers(1, &m_bufCol);
-        m_colGenerated = false;
-    }
-}
+//InstancedDrawable::InstancedDrawable(OpenGLContext *context)
+//    : Drawable(context), m_numInstances(0), m_bufPosOffset(-1), m_offsetGenerated(false)
+//{}
+
+//InstancedDrawable::~InstancedDrawable(){}
+
+//int InstancedDrawable::instanceCount() const {
+//    return m_numInstances;
+//}
+
+//void InstancedDrawable::generateOffsetBuf() {
+//    m_offsetGenerated = true;
+//    mp_context->glGenBuffers(1, &m_bufPosOffset);
+//}
+
+//bool InstancedDrawable::bindOffsetBuf() {
+//    if(m_offsetGenerated){
+//        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufPosOffset);
+//    }
+//    return m_offsetGenerated;
+//}
+
+
+//void InstancedDrawable::clearOffsetBuf() {
+//    if(m_offsetGenerated) {
+//        mp_context->glDeleteBuffers(1, &m_bufPosOffset);
+//        m_offsetGenerated = false;
+//    }
+//}
+//void InstancedDrawable::clearColorBuf() {
+//    if(m_colGenerated) {
+//        mp_context->glDeleteBuffers(1, &m_bufCol);
+//        m_colGenerated = false;
+//    }
+//}

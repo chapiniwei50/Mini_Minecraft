@@ -1,12 +1,6 @@
 #pragma once
-#include "smartpointerhelp.h"
-#include "glm_includes.h"
-#include "drawable.h"
-#include <array>
-#include <unordered_map>
-#include <cstddef>
-#include <stdio.h>
-#include <stdexcept>
+#include "chunkhelper.h"
+
 
 class Terrain;
 struct ChunkOpaqueTransparentVBOData;
@@ -16,32 +10,7 @@ struct ChunkOpaqueTransparentVBOData;
 // of memory to store our different block types. By default, the size of a C++ enum
 // is that of an int (so, usually four bytes). This *does* limit us to only 256 different
 // block types, but in the scope of this project we'll never get anywhere near that many.
-enum BlockType : unsigned char
-{
-    EMPTY, GRASS, DIRT, STONE, WATER
-};
 
-// The six cardinal directions in 3D space
-enum Direction : unsigned char
-{
-    XPOS, XNEG, YPOS, YNEG, ZPOS, ZNEG
-};
-
-enum class BiomeType : unsigned char{
-    NULLBIOME,
-    DESSERT,
-    PLAIN,
-    MOUNTAIN
-};
-
-// Lets us use any enum class as the key of a
-// std::unordered_map
-struct EnumHash {
-    template <typename T>
-    size_t operator()(T t) const {
-        return static_cast<size_t>(t);
-    }
-};
 
 //Leave for opaque and transparent data
 class Chunk;

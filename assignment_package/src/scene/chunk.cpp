@@ -51,38 +51,57 @@ int Chunk::is_boundary(int x, int y, int z) const
     if (getBlockAt(x, y, z) == EMPTY)
         return res;
 
+    // if water
+    if (getBlockAt(x, y, z) == WATER)
+    {  // only render the YPOS of the first layer of water
+        if (y == 255 || (y != 255 && getBlockAt(x, y + 1, z) == EMPTY))
+            return 0b000100;
+        else
+            return 0;
+    }
+
     // x neg face direction
     if ((x == 0 && m_neighbors.at(XNEG) == nullptr) ||
         (x == 0 && m_neighbors.at(XNEG)->getBlockAt(15, y, z) == EMPTY) ||
-        (x != 0 && getBlockAt(x - 1, y, z) == EMPTY))
+        (x != 0 && getBlockAt(x - 1, y, z) == EMPTY) ||
+        (x == 0 && m_neighbors.at(XNEG)->getBlockAt(15, y, z) == WATER) ||
+        (x != 0 && getBlockAt(x - 1, y, z) == WATER))
         res = res | 0b100000;
 
     // x pos face direction
     if ((x == 15 && m_neighbors.at(XPOS) == nullptr) ||
         (x == 15 && m_neighbors.at(XPOS)->getBlockAt(0, y, z) == EMPTY) ||
-        (x != 15 && getBlockAt(x + 1, y, z) == EMPTY))
+        (x != 15 && getBlockAt(x + 1, y, z) == EMPTY) ||
+        (x == 15 && m_neighbors.at(XPOS)->getBlockAt(0, y, z) == WATER) ||
+        (x != 15 && getBlockAt(x + 1, y, z) == WATER))
         res = res | 0b010000;
 
     // y neg face direction
     if (y == 0 ||
-        (y != 0 && getBlockAt(x, y - 1, z) == EMPTY))
+        (y != 0 && getBlockAt(x, y - 1, z) == EMPTY) ||
+        (y != 0 && getBlockAt(x, y - 1, z) == WATER))
         res = res | 0b001000;
 
     // y pos face direction
     if (y == 255 ||
-        (y != 255 && getBlockAt(x, y + 1, z) == EMPTY))
+        (y != 255 && getBlockAt(x, y + 1, z) == EMPTY) ||
+        (y != 255 && getBlockAt(x, y + 1, z) == WATER))
         res = res | 0b000100;
 
     // z neg face direction
     if ((z == 0 && m_neighbors.at(ZNEG) == nullptr) ||
         (z == 0 && m_neighbors.at(ZNEG)->getBlockAt(x, y, 15) == EMPTY) ||
-        (z != 0 && getBlockAt(x, y, z - 1) == EMPTY))
+        (z != 0 && getBlockAt(x, y, z - 1) == EMPTY) ||
+        (z == 0 && m_neighbors.at(ZNEG)->getBlockAt(x, y, 15) == WATER) ||
+        (z != 0 && getBlockAt(x, y, z - 1) == WATER))
         res = res | 0b000010;
 
     // z pos face direction
     if ((z == 15 && m_neighbors.at(ZPOS) == nullptr) ||
         (z == 15 && m_neighbors.at(ZPOS)->getBlockAt(x, y, 0) == EMPTY) ||
-        (z != 15 && getBlockAt(x, y, z + 1) == EMPTY))
+        (z != 15 && getBlockAt(x, y, z + 1) == EMPTY) ||
+        (z == 15 && m_neighbors.at(ZPOS)->getBlockAt(x, y, 0) == WATER) ||
+        (z != 15 && getBlockAt(x, y, z + 1) == WATER))
         res = res | 0b000001;
 
     return res;
@@ -91,8 +110,8 @@ int Chunk::is_boundary(int x, int y, int z) const
 
 void Chunk::createVBOdata()
 {
-    std::vector<glm::vec4> pos_nor_color;
-    std::vector<GLuint> idx;
+    std::vector<glm::vec4> pos_nor_uv_opaque, pos_nor_uv_transparent;
+    std::vector<GLuint> idx_opaque, idx_transparent;
 
     for (unsigned int x = 0; x < 16; x++)
         for (unsigned int y = 0; y < 256; y++)
@@ -105,186 +124,210 @@ void Chunk::createVBOdata()
                     continue;
 
                 BlockType t = getBlockAt(x, y, z);
-                glm::vec4 color;
-                switch (t) {
-                case GRASS:
-                    color = glm::vec4(95.f, 159.f, 53.f, 255.f) / 255.f;
-                    break;
-                case DIRT:
-                    color = glm::vec4(121.f, 85.f, 58.f, 255.f) / 255.f;
-                    break;
-                case STONE:
-                    color = glm::vec4(0.5f);
-                    break;
-                case WATER:
-                    color = glm::vec4(0.f, 0.f, 0.75f, 1.f);
-                    break;
-                default:
-                    color = glm::vec4(1.f, 0.f, 1.f, 1.f);
-                    break;
-                }
 
-                // temporarily differentiate the color a bit for better visualization
-                float ratio = ((float)std::rand()) / RAND_MAX;
-                ratio = ratio * 0.4 + 0.8;
-                color *= ratio;
-                color[3] = 1.f;
+                // choose the correct data buffer according to whther the block is opaque
+                // should change to a set for futhre work
+                std::vector<glm::vec4>& data_to_push = pos_nor_uv_opaque;
+                if (t == WATER)
+                    data_to_push = pos_nor_uv_transparent;
 
+                glm::vec4 uv;
                 // draw x neg face
                 if ((boundary_info & 0b100000) != 0)
                 {
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    uv = glm::vec4(blockFaceUVs.at(t).at(XNEG), 0, 0);
+                    if (t == WATER || t == LAVA)  // add a flag that this flag should animate in shader
+                        uv[2] = 1.0;
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, GRID, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, 0, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, 0, 0, 0));
+
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, GRID, 0, 0));
                 }
 
                 // draw x pos face
                 if ((boundary_info & 0b010000) != 0)
                 {
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    uv = glm::vec4(blockFaceUVs.at(t).at(XPOS), 0, 0);
+                    if (t == WATER || t == LAVA)
+                        uv[2] = 1.0;
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, GRID, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, 0, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, 0, 0, 0));
+
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, GRID, 0, 0));
                 }
 
                 // draw y neg face
                 if ((boundary_info & 0b001000) != 0)
                 {
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    uv = glm::vec4(blockFaceUVs.at(t).at(YNEG), 0, 0);
+                    if (t == WATER || t == LAVA)
+                        uv[2] = 1.0;
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, GRID, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, 0, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, 0, 0, 0));
+
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, GRID, 0, 0));
                 }
 
                 // draw y pos face
                 if ((boundary_info & 0b000100) != 0)
                 {
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    uv = glm::vec4(blockFaceUVs.at(t).at(YPOS), 0, 0);
+                    if (t == WATER || t == LAVA)
+                        uv[2] = 1.0;
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, GRID, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, 0, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, 0, 0, 0));
+
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, GRID, 0, 0));
                 }
 
                 // draw z neg face
                 if ((boundary_info & 0b000010) != 0)
                 {
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    uv = glm::vec4(blockFaceUVs.at(t).at(ZNEG), 0, 0);
+                    if (t == WATER || t == LAVA)
+                        uv[2] = 1.0;
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, GRID, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, 0, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, 0, 0, 0));
+
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, GRID, 0, 0));
                 }
 
                 // draw z pos face
                 if ((boundary_info & 0b000001) != 0)
                 {
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    uv = glm::vec4(blockFaceUVs.at(t).at(ZPOS), 0, 0);
+                    if (t == WATER || t == LAVA)
+                        uv[2] = 1.0;
 
-                    pos_nor_color.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, GRID, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(0, 0, 0, 0));
 
-                    pos_nor_color.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
-                    pos_nor_color.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
-                    pos_nor_color.push_back(color);
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, 0, 0, 0));
+
+                    data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
+                    data_to_push.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
+                    data_to_push.push_back(uv + glm::vec4(GRID, GRID, 0, 0));
                 }
             }
 
     // generate index data according to the number of face to render
-    int num_faces = pos_nor_color.size() / 4 / 3;
-    for (int i = 0; i < num_faces; i++)
+    int num_faces_opaque = pos_nor_uv_opaque.size() / 4 / 3;
+    for (int i = 0; i < num_faces_opaque; i++)
     {
-        idx.push_back(i * 4);
-        idx.push_back(i * 4 + 1);
-        idx.push_back(i * 4 + 2);
-        idx.push_back(i * 4);
-        idx.push_back(i * 4 + 2);
-        idx.push_back(i * 4 + 3);
+        idx_opaque.push_back(i * 4);
+        idx_opaque.push_back(i * 4 + 1);
+        idx_opaque.push_back(i * 4 + 2);
+        idx_opaque.push_back(i * 4);
+        idx_opaque.push_back(i * 4 + 2);
+        idx_opaque.push_back(i * 4 + 3);
+    }
+    int num_faces_transparent = pos_nor_uv_transparent.size() / 4 / 3;
+    for (int i = 0; i < num_faces_transparent; i++)
+    {
+        idx_transparent.push_back(i * 4);
+        idx_transparent.push_back(i * 4 + 1);
+        idx_transparent.push_back(i * 4 + 2);
+        idx_transparent.push_back(i * 4);
+        idx_transparent.push_back(i * 4 + 2);
+        idx_transparent.push_back(i * 4 + 3);
     }
 
-    m_count = idx.size();
+    m_countOpq = idx_opaque.size();
+    m_countTra = idx_transparent.size();
 
     // opaque
-    vboData.m_vboDataOpaque = pos_nor_color;
-    vboData.m_idxDataOpaque = idx;
-
-    // buff vertex data and indices into proper VBOs.
-    // buff_data();
-    // buff_data should be performed on the main thread as it directly communicate with OpenGL
+    vboData.m_vboDataOpaque = pos_nor_uv_opaque;
+    vboData.m_idxDataOpaque = idx_opaque;
+    // transparent
+    vboData.m_vboDataTransparent = pos_nor_uv_transparent;
+    vboData.m_idxDataTransparent = idx_transparent;
 }
 
 void Chunk::bindVBOdata()
 {
     // buff vertex data and indices into proper VBOs.
-    generateIdx();
-    mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdx);
+    generateIdxOpq();
+    mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxOpq);
     mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataOpaque.size() * sizeof(GLuint), vboData.m_idxDataOpaque.data(), GL_STATIC_DRAW);
 
-    generateInterleaved();
-    mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufInterleaved);
+    generateDataOpq();
+    mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataOpq);
     mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataOpaque.size() * sizeof(glm::vec4), vboData.m_vboDataOpaque.data(), GL_STATIC_DRAW);
 
+    generateIdxTra();
+    mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxTra);
+    mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataTransparent.size() * sizeof(GLuint), vboData.m_idxDataTransparent.data(), GL_STATIC_DRAW);
+
+    generateDataTra();
+    mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataTra);
+    mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataTransparent.size() * sizeof(glm::vec4), vboData.m_vboDataTransparent.data(), GL_STATIC_DRAW);
 }
 
 void Chunk::createChunkBlockData(){
