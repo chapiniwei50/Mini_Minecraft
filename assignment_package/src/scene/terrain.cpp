@@ -175,7 +175,12 @@ void Terrain::draw(int minX, int maxX, int minZ, int maxZ, ShaderProgram *shader
         for(int z = minZ; z < maxZ; z += 16) {
             if (hasChunkAt(x, z)){
                 const uPtr<Chunk> &chunk = getChunkAt(x, z);
-                shaderProgram->drawInterleaved(chunk.get(), opaque);
+                if (opaque && chunk->m_countOpq <= 0)
+                    continue;
+                if (!opaque && chunk->m_countTra <= 0)
+                    continue;
+
+                shaderProgram->drawInterleaved(chunk.get(), opaque, 0);
             }
         }
     }
