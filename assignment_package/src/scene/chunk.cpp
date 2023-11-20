@@ -127,9 +127,7 @@ void Chunk::createVBOdata()
 
                 // choose the correct data buffer according to whther the block is opaque
                 // should change to a set for futhre work
-                std::vector<glm::vec4>& data_to_push = pos_nor_uv_opaque;
-                if (t == WATER)
-                    data_to_push = pos_nor_uv_transparent;
+                std::vector<glm::vec4>& data_to_push = (t == WATER) ? pos_nor_uv_transparent : pos_nor_uv_opaque;
 
                 glm::vec4 uv;
                 // draw x neg face
@@ -313,21 +311,27 @@ void Chunk::createVBOdata()
 void Chunk::buff_data()
 {
     // buff vertex data and indices into proper VBOs.
-    generateIdxOpq();
-    mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxOpq);
-    mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataOpaque.size() * sizeof(GLuint), vboData.m_idxDataOpaque.data(), GL_STATIC_DRAW);
+    if (m_countOpq > 0)
+    {
+        generateIdxOpq();
+        mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxOpq);
+        mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataOpaque.size() * sizeof(GLuint), vboData.m_idxDataOpaque.data(), GL_STATIC_DRAW);
 
-    generateDataOpq();
-    mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataOpq);
-    mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataOpaque.size() * sizeof(glm::vec4), vboData.m_vboDataOpaque.data(), GL_STATIC_DRAW);
+        generateDataOpq();
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataOpq);
+        mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataOpaque.size() * sizeof(glm::vec4), vboData.m_vboDataOpaque.data(), GL_STATIC_DRAW);
+    }
 
-    generateIdxTra();
-    mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxTra);
-    mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataTransparent.size() * sizeof(GLuint), vboData.m_idxDataTransparent.data(), GL_STATIC_DRAW);
+    if (m_countTra > 0)
+    {
+        generateIdxTra();
+        mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxTra);
+        mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData.m_idxDataTransparent.size() * sizeof(GLuint), vboData.m_idxDataTransparent.data(), GL_STATIC_DRAW);
 
-    generateDataTra();
-    mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataTra);
-    mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataTransparent.size() * sizeof(glm::vec4), vboData.m_vboDataTransparent.data(), GL_STATIC_DRAW);
+        generateDataTra();
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufDataTra);
+        mp_context->glBufferData(GL_ARRAY_BUFFER, vboData.m_vboDataTransparent.size() * sizeof(glm::vec4), vboData.m_vboDataTransparent.data(), GL_STATIC_DRAW);
+    }
 }
 
 void Chunk::createChunkBlockData(){
