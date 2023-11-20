@@ -7,6 +7,7 @@
 #include "scene/camera.h"
 #include "scene/terrain.h"
 #include "scene/player.h"
+#include "smartpointerhelp.h"
 
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
@@ -17,13 +18,12 @@ class MyGL : public OpenGLContext
 {
     Q_OBJECT
 private:
-    WorldAxes m_worldAxes; // A wireframe representation of the world axes. It is hard-coded to sit centered at (32, 128, 32).
     ShaderProgram m_progLambert;// A shader program that uses lambertian reflection
     ShaderProgram m_progFlat;// A shader program that uses "flat" reflection (no shadowing at all)
-    ShaderProgram m_progInstanced;// A shader program that is designed to be compatible with instanced rendering
 
     GLuint vao; // A handle for our vertex array object. This will store the VBOs created in our geometry classes.
         // Don't worry too much about this. Just know it is necessary in order to render geometry.
+
 
     Terrain m_terrain; // All of the Chunks that currently comprise the world.
     Player m_player; // The entity controlled by the user. Contains a camera to display what it sees as well.
@@ -42,6 +42,8 @@ private:
 
 
     void sendPlayerDataToGUI() const;
+
+    int m_time; // another timer for shader programs cuz I don't know how to use QTimer haha.
 
 
 public:

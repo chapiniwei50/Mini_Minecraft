@@ -10,9 +10,9 @@
 
 MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
-    m_worldAxes(this),
-    m_progLambert(this), m_progFlat(this), m_progInstanced(this),
-    m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch())
+    m_progLambert(this), m_progFlat(this),
+    m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch()),
+    m_time(0)
 {
     // Connect the timer to a function so that when the timer ticks the function is executed
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(tick()));
@@ -48,25 +48,30 @@ void MyGL::initializeGL()
     // Set the color with which the screen is filled at the start of each render call.
     glClearColor(0.37f, 0.74f, 1.0f, 1);
 
+    // enable alpha blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
     printGLErrorLog();
 
     // Create a Vertex Attribute Object
     glGenVertexArrays(1, &vao);
 
-    //Create the instance of the world axes
-    m_worldAxes.createVBOdata();
-
-    // Create and set up the diffuse shader
-    m_progLambert.create(":/glsl/lambert.vert.glsl", ":/glsl/lambert.frag.glsl");
     // Create and set up the flat lighting shader
     m_progFlat.create(":/glsl/flat.vert.glsl", ":/glsl/flat.frag.glsl");
-    m_progInstanced.create(":/glsl/instanced.vert.glsl", ":/glsl/lambert.frag.glsl");
+    // Create and set up the diffuse shader
+    m_progLambert.create(":/glsl/lambert.vert.glsl", ":/glsl/lambert.frag.glsl");
+    //m_progInstanced.create(":/glsl/instanced.vert.glsl", ":/glsl/lambert.frag.glsl");
 
     // Set a color with which to draw geometry.
     // This will ultimately not be used when you change
     // your program to render Chunks with vertex colors
     // and UV coordinates
     m_progLambert.setGeometryColor(glm::vec4(0,1,0,1));
+
+    // create texture, stored in m_terrain, applied to all chunks
+    m_terrain.create_load_texture("../textures/minecraft_textures_all.png");
 
     // We have to have a VAO bound in OpenGL 3.2 Core. But if we're not
     // using multiple VAOs, we can just bind one once.
@@ -129,17 +134,20 @@ void MyGL::paintGL() {
 
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     m_progLambert.setViewProjMatrix(m_player.mcr_camera.getViewProj());
-    m_progInstanced.setViewProjMatrix(m_player.mcr_camera.getViewProj());
+    //m_progInstanced.setViewProjMatrix(m_player.mcr_camera.getViewProj());
 
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
     renderTerrain();
 
+    // update time for shader
+    m_progFlat.setTime(m_time);
+    m_time++;
+
     glDisable(GL_DEPTH_TEST); 
     m_progFlat.setModelMatrix(glm::mat4());
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
-    m_progFlat.draw(m_worldAxes);
     glEnable(GL_DEPTH_TEST);
 }
 
@@ -149,8 +157,12 @@ void MyGL::paintGL() {
 void MyGL::renderTerrain() {
     int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
     int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
-    m_terrain.draw(x - 64, x + 64, z - 64, z + 64, &m_progInstanced);
+    // draw opaque
+    m_terrain.draw(x - 64, x + 64, z - 64, z + 64, &m_progFlat, true);
+    // draw transparent
+    m_terrain.draw(x - 64, x + 64, z - 64, z + 64, &m_progFlat, false);
 }
+
 
 
 void MyGL::keyPressEvent(QKeyEvent *e) {
