@@ -62,6 +62,8 @@ void Player::processInputs(InputBundle &inputs) {
         return;
     }
 
+
+#ifdef Q_OS_WIN
     auto clamp = [](float value, float minVal, float maxVal) -> float {
         return std::max(minVal, std::min(value, maxVal));
     };
@@ -75,6 +77,7 @@ void Player::processInputs(InputBundle &inputs) {
 
     rotateOnUpGlobal(thetaChange);
     rotateOnRightLocal(phiChange);
+#endif
 
 }
 bool Player::isBlockAt( glm::vec3& position, const Terrain& terrain) {

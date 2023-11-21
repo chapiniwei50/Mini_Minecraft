@@ -124,6 +124,6 @@ public:
     void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
 
     // init texture file
-    void create_load_texture(const char* textureFile);
+    void create_load_texture(const char *textureFile);
 
 };

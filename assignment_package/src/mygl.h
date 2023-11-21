@@ -12,7 +12,8 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
 #include <smartpointerhelp.h>
-
+#include <QDir>
+#include <QString>
 
 class MyGL : public OpenGLContext
 {

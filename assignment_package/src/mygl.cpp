@@ -70,8 +70,24 @@ void MyGL::initializeGL()
     // and UV coordinates
     m_progLambert.setGeometryColor(glm::vec4(0,1,0,1));
 
-    // create texture, stored in m_terrain, applied to all chunks
+#ifdef Q_OS_MAC
+    QString sourceFilePath = __FILE__;
+    QFileInfo sourceFileInfo(sourceFilePath);
+    QDir baseDir = sourceFileInfo.absoluteDir();
+    QString fullPath = baseDir.absolutePath();
+    QString keyDirectoryName = "mini-minecraft";
+    int keyDirIndex = fullPath.indexOf(keyDirectoryName);
+    QString projectRootPath;
+    if (keyDirIndex != -1) {
+        projectRootPath = fullPath.left(keyDirIndex + keyDirectoryName.length());
+    }
+    QString texturePath = projectRootPath + "/assignment_package/textures/minecraft_textures_all.png";
+    m_terrain.create_load_texture(texturePath.toUtf8().constData());
+#endif
+
+#ifdef Q_OS_WIN
     m_terrain.create_load_texture("../textures/minecraft_textures_all.png");
+#endif
 
     // We have to have a VAO bound in OpenGL 3.2 Core. But if we're not
     // using multiple VAOs, we can just bind one once.
@@ -234,6 +250,7 @@ void MyGL::keyReleaseEvent(QKeyEvent *e) {
 }
 void MyGL::mouseMoveEvent(QMouseEvent *e) {
 
+#ifdef Q_OS_WIN
     QPoint mousePos = e->pos();
     QPoint centerPos = QPoint(width() / 2, height() / 2);
     if (this->hasFocus()){
@@ -244,18 +261,16 @@ void MyGL::mouseMoveEvent(QMouseEvent *e) {
         m_inputs.mouseX = 0;
         m_inputs.mouseY = 0;
     }
+#endif
 
-/*
+#ifdef Q_OS_MAC
     float dx = e->pos().x() - lastMousePosition.x();
     float dy = e->pos().y() - lastMousePosition.y();
     lastMousePosition = e->pos();
     m_player.rotateOnUpGlobal(dx);
     m_player.rotateOnRightLocal(dy);
-
-#ifdef Q_OS_MAC
-    moveMouseToCenter();
 #endif
-*/
+
 
 }
 

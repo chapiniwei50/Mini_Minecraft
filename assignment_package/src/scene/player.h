@@ -8,7 +8,6 @@
 class Player : public Entity {
 private:
     glm::vec3 m_velocity, m_acceleration, m_lastFramePosition;
-    glm::vec2 m_cameraOrientation;
     Camera m_camera;
     Terrain &mcr_terrain;
 
@@ -26,6 +25,7 @@ public:
     // Readonly public reference to our camera
     // for easy access from MyGL
     const Camera& mcr_camera;
+    glm::vec2 m_cameraOrientation;
 
     Player(glm::vec3 pos, Terrain &terrain);
     virtual ~Player() override;
