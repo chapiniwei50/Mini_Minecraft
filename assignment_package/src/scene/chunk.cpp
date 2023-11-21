@@ -308,7 +308,7 @@ void Chunk::createVBOdata()
     vboData.m_idxDataTransparent = idx_transparent;
 }
 
-void Chunk::buff_data()
+void Chunk::bindVBOdata()
 {
     // buff vertex data and indices into proper VBOs.
     if (m_countOpq > 0)
@@ -412,6 +412,20 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
         }
     }
     */
+}
+
+void Chunk::refreshChunkVBOData(){
+    destroyVBOdata();
+    createVBOdata();
+    bindVBOdata();
+}
+
+void Chunk::refreshAdjacentChunkVBOData(){
+
+    m_neighbors[XNEG]->refreshChunkVBOData();
+    m_neighbors[XPOS]->refreshChunkVBOData();
+    m_neighbors[ZNEG]->refreshChunkVBOData();
+    m_neighbors[ZPOS]->refreshChunkVBOData();
 }
 
 void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
