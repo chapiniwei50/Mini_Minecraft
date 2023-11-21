@@ -167,106 +167,6 @@ void ShaderProgram::seteffectType(const int type)
     }
 }
 
-//This function, as its name implies, uses the passed in GL widget
-//void ShaderProgram::draw(Drawable &d, int textureSlot)
-//{
-//    useMe();
-
-//    if(d.elemCount() < 0) {
-//        throw std::out_of_range("Attempting to draw a drawable with m_count of " + std::to_string(d.elemCount()) + "!");
-//    }
-
-//    // Each of the following blocks checks that:
-//    //   * This shader has this attribute, and
-//    //   * This Drawable has a vertex buffer for this attribute.
-//    // If so, it binds the appropriate buffers to each attribute.
-
-//    // Remember, by calling bindPos(), we call
-//    // glBindBuffer on the Drawable's VBO for vertex position,
-//    // meaning that glVertexAttribPointer associates vs_Pos
-//    // (referred to by attrPos) with that VBO
-//    if (attrPos != -1 && d.bindPos()) {
-//        context->glEnableVertexAttribArray(attrPos);
-//        context->glVertexAttribPointer(attrPos, 4, GL_FLOAT, false, 0, NULL);
-//    }
-
-//    if (attrNor != -1 && d.bindNor()) {
-//        context->glEnableVertexAttribArray(attrNor);
-//        context->glVertexAttribPointer(attrNor, 4, GL_FLOAT, false, 0, NULL);
-//    }
-
-//    if (attrCol != -1 && d.bindCol()) {
-//        context->glEnableVertexAttribArray(attrCol);
-//        context->glVertexAttribPointer(attrCol, 4, GL_FLOAT, false, 0, NULL);
-//    }
-
-//    // Bind the index buffer and then draw shapes from it.
-//    // This invokes the shader program, which accesses the vertex buffers.
-//    d.bindIdx();
-//    context->glDrawElements(d.drawMode(), d.elemCount(), GL_UNSIGNED_INT, 0);
-
-//    if (attrPos != -1) context->glDisableVertexAttribArray(attrPos);
-//    if (attrNor != -1) context->glDisableVertexAttribArray(attrNor);
-//    if (attrCol != -1) context->glDisableVertexAttribArray(attrCol);
-
-//    context->printGLErrorLog();
-//}
-
-//void ShaderProgram::drawInstanced(InstancedDrawable &d)
-//{
-//    useMe();
-
-//    if(d.elemCount() < 0) {
-//        throw std::out_of_range("Attempting to draw a drawable with m_count of " + std::to_string(d.elemCount()) + "!");
-//    }
-
-//    // Each of the following blocks checks that:
-//    //   * This shader has this attribute, and
-//    //   * This Drawable has a vertex buffer for this attribute.
-//    // If so, it binds the appropriate buffers to each attribute.
-
-//    // Remember, by calling bindPos(), we call
-//    // glBindBuffer on the Drawable's VBO for vertex position,
-//    // meaning that glVertexAttribPointer associates vs_Pos
-//    // (referred to by attrPos) with that VBO
-//    if (attrPos != -1 && d.bindPos()) {
-//        context->glEnableVertexAttribArray(attrPos);
-//        context->glVertexAttribPointer(attrPos, 4, GL_FLOAT, false, 0, NULL);
-//        context->glVertexAttribDivisor(attrPos, 0);
-//    }
-
-//    if (attrNor != -1 && d.bindNor()) {
-//        context->glEnableVertexAttribArray(attrNor);
-//        context->glVertexAttribPointer(attrNor, 4, GL_FLOAT, false, 0, NULL);
-//        context->glVertexAttribDivisor(attrNor, 0);
-//    }
-
-//    if (attrCol != -1 && d.bindCol()) {
-//        context->glEnableVertexAttribArray(attrCol);
-//        context->glVertexAttribPointer(attrCol, 3, GL_FLOAT, false, 0, NULL);
-//        context->glVertexAttribDivisor(attrCol, 1);
-//    }
-
-//    if (attrPosOffset != -1 && d.bindOffsetBuf()) {
-//        context->glEnableVertexAttribArray(attrPosOffset);
-//        context->glVertexAttribPointer(attrPosOffset, 3, GL_FLOAT, false, 0, NULL);
-//        context->glVertexAttribDivisor(attrPosOffset, 1);
-//    }
-
-//    // Bind the index buffer and then draw shapes from it.
-//    // This invokes the shader program, which accesses the vertex buffers.
-//    d.bindIdx();
-//    context->glDrawElementsInstanced(d.drawMode(), d.elemCount(), GL_UNSIGNED_INT, 0, d.instanceCount());
-//    context->printGLErrorLog();
-
-//    if (attrPos != -1) context->glDisableVertexAttribArray(attrPos);
-//    if (attrNor != -1) context->glDisableVertexAttribArray(attrNor);
-//    if (attrCol != -1) context->glDisableVertexAttribArray(attrCol);
-//    if (attrPosOffset != -1) context->glDisableVertexAttribArray(attrPosOffset);
-
-//}
-
-
 void ShaderProgram::drawInterleaved(Drawable *d, bool opaque, int textureSlot)
 {
     useMe();
@@ -431,24 +331,21 @@ void ShaderProgram::drawEffect(Drawable &d){
         throw std::out_of_range("Attempting to draw a drawable with m_count of " + std::to_string(d.elemOpqCount()) + "!");
     }
 
+    if (attrPos != -1 && d.bindPos()) {
+        context->glEnableVertexAttribArray(attrPos);
+        context->glVertexAttribPointer(attrPos, 4, GL_FLOAT, false, 0, NULL);
+    }
+    if (attrUVFrameBuffer != -1 && d.bindUV()) {
+        context->glEnableVertexAttribArray(attrUVFrameBuffer);
+        context->glVertexAttribPointer(attrUVFrameBuffer, 2, GL_FLOAT, false, 0, NULL);
+    }
 
 
-        if (attrPos != -1 && d.bindPos()) {
-            context->glEnableVertexAttribArray(attrPos);
-            context->glVertexAttribPointer(attrPos, 4, GL_FLOAT, false, 0, NULL);
-        }
-        if (attrUV != -1 && d.bindUV()) {
-            context->glEnableVertexAttribArray(attrUV);
-            context->glVertexAttribPointer(attrUV, 2, GL_FLOAT, false, 0, NULL);
-        }
-
-
-
-        // Bind the index buffer and then draw shapes from it.
-        // This invokes the shader program, which accesses the vertex buffers.
-        d.bindIdxOpq();
-        context->glDrawElements(d.drawMode(), d.elemOpqCount(), GL_UNSIGNED_INT, 0);
-        if (attrPos != -1) context->glDisableVertexAttribArray(attrPos);
-        if (attrUV != -1) context->glDisableVertexAttribArray(attrUV);
-        context->printGLErrorLog();
+    // Bind the index buffer and then draw shapes from it.
+    // This invokes the shader program, which accesses the vertex buffers.
+    d.bindIdxOpq();
+    context->glDrawElements(d.drawMode(), d.elemOpqCount(), GL_UNSIGNED_INT, 0);
+    if (attrPos != -1) context->glDisableVertexAttribArray(attrPos);
+    if (attrUVFrameBuffer != -1) context->glDisableVertexAttribArray(attrUVFrameBuffer);
+    context->printGLErrorLog();
 }

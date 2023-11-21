@@ -64,9 +64,9 @@ void Player::processInputs(InputBundle &inputs) {
     };
 
     glm::vec2 cameraOrientationOrigin = m_cameraOrientation;
-    float thetaChange = 2 * inputs.mouseX;
+    float thetaChange = 0.2 * inputs.mouseX;
     m_cameraOrientation.x = std::fmod(m_cameraOrientation.x + thetaChange, 360);
-    float phiChange = 2 * inputs.mouseY;
+    float phiChange = 0.2 * inputs.mouseY;
     m_cameraOrientation.y = clamp(m_cameraOrientation.y + phiChange, -89.9999, 89.9999);
     phiChange = m_cameraOrientation.y - cameraOrientationOrigin.y;
 

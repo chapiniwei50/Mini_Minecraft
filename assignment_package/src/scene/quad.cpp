@@ -19,16 +19,14 @@ void Quad::createVBOdata()
 
     m_countOpq = 6;
 
-
     generateIdxOpq();
-//    bindIdx();
     mp_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bufIdxOpq);
     mp_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLuint), idx, GL_STATIC_DRAW);
 
     generatePos();
-//    bindPos();
     mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufPos);
     mp_context->glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(glm::vec4), vert_pos, GL_STATIC_DRAW);
+
     generateUV();
     mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufUV);
     mp_context->glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(glm::vec2), vert_UV, GL_STATIC_DRAW);
