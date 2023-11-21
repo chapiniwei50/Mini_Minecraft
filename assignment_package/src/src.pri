@@ -2,10 +2,12 @@ INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
 
 SOURCES += \
+    $$PWD/framebuffer.cpp \
     $$PWD/main.cpp \
     $$PWD/mainwindow.cpp \
     $$PWD/mygl.cpp \
     $$PWD/scene/chunkworkers.cpp \
+    $$PWD/scene/quad.cpp \
     $$PWD/shaderprogram.cpp \
     $$PWD/drawable.cpp \
     $$PWD/cameracontrolshelp.cpp \
@@ -21,10 +23,12 @@ SOURCES += \
     $$PWD/texture.cpp
 
 HEADERS += \
+    $$PWD/framebuffer.h \
     $$PWD/mainwindow.h \
     $$PWD/mygl.h \
     $$PWD/scene/chunkhelper.h \
     $$PWD/scene/chunkworkers.h \
+    $$PWD/scene/quad.h \
     $$PWD/shaderprogram.h \
     $$PWD/drawable.h \
     $$PWD/cameracontrolshelp.h \

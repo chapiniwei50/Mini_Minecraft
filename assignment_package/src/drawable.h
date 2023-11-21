@@ -14,11 +14,14 @@ protected:
     GLuint m_bufDataOpq; // The interleaved data buffer
     GLuint m_bufDataTra; // The interleaved data buffer
 
-
+    GLuint m_bufUV;
+    GLuint m_bufPos;
     bool m_idxOpqGenerated; // Set to TRUE by generateIdx(), returned by bindIdx().
     bool m_idxTraGenerated;
     bool m_bufDataOpqGenerated;
     bool m_bufDataTraGenerated;
+    bool m_UVGenerated;
+    bool m_PosGenerated;
 
     OpenGLContext* mp_context; // Since Qt's OpenGL support is done through classes like QOpenGLFunctions_3_2_Core,
                           // we need to pass our OpenGL context to the Drawable in order to call GL functions
@@ -45,11 +48,17 @@ public:
     void generateDataOpq();
     void generateDataTra();
 
+    void generateUV();
+    void generatePos();
+
     bool bindIdxOpq();
     bool bindIdxTra();
 
+
     bool bindDataOpq();
     bool bindDataTra();
+    bool bindUV();
+    bool bindPos();
 };
 
 // A subclass of Drawable that enables the base code to render duplicates of

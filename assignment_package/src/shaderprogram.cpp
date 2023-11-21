@@ -4,12 +4,14 @@
 #include <QTextStream>
 #include <QDebug>
 #include <stdexcept>
+#include <iostream>
+
 
 
 ShaderProgram::ShaderProgram(OpenGLContext *context)
     : vertShader(), fragShader(), prog(),
-    attrPos(-1), attrNor(-1), attrCol(-1), attrUV(-1),
-    unifModel(-1), unifModelInvTr(-1), unifViewProj(-1), unifColor(-1), unifSampler2D(-1), unifTime(-1),
+    attrPos(-1), attrNor(-1), attrCol(-1), attrUV(-1), attrUVFrameBuffer(-1),
+    unifModel(-1), unifModelInvTr(-1), unifViewProj(-1), unifColor(-1), unifTime(-1), unifEffectType(-1),unifSamplerFrameBuffer(-1),
       context(context)
 {}
 
@@ -67,13 +69,16 @@ void ShaderProgram::create(const char *vertfile, const char *fragfile)
     if(attrCol == -1) attrCol = context->glGetAttribLocation(prog, "vs_ColInstanced");
     attrPosOffset = context->glGetAttribLocation(prog, "vs_OffsetInstanced");
     attrUV = context->glGetAttribLocation(prog, "vs_UV");
+    attrUVFrameBuffer = context->glGetAttribLocation(prog, "vs_UVFrameBuffer");
 
     unifModel      = context->glGetUniformLocation(prog, "u_Model");
     unifModelInvTr = context->glGetUniformLocation(prog, "u_ModelInvTr");
     unifViewProj   = context->glGetUniformLocation(prog, "u_ViewProj");
     unifColor      = context->glGetUniformLocation(prog, "u_Color");
+    unifEffectType = context->glGetUniformLocation(prog, "u_EffectType");
 
     unifSampler2D  = context->glGetUniformLocation(prog, "u_Texture");
+    unifSamplerFrameBuffer = context->glGetUniformLocation(prog, "u_RenderedTexture");
     unifTime = context->glGetUniformLocation(prog, "u_Time");
 
     context->printGLErrorLog();
@@ -149,6 +154,16 @@ void ShaderProgram::setGeometryColor(glm::vec4 color)
     if(unifColor != -1)
     {
         context->glUniform4fv(unifColor, 1, &color[0]);
+    }
+}
+
+void ShaderProgram::seteffectType(const int type)
+{
+    useMe();
+
+    if(unifEffectType != -1)
+    {
+        context->glUniform1i(unifEffectType, type);
     }
 }
 
@@ -404,4 +419,36 @@ void ShaderProgram::printLinkInfoLog(int prog)
         qDebug() << "LinkInfoLog:" << "\n" << infoLog << "\n";
         delete [] infoLog;
     }
+}
+
+
+void ShaderProgram::drawEffect(Drawable &d){
+    std::cout<<"draw"<<std::endl;
+
+    useMe();
+
+    if(d.elemOpqCount() < 0) {
+        throw std::out_of_range("Attempting to draw a drawable with m_count of " + std::to_string(d.elemOpqCount()) + "!");
+    }
+
+
+
+        if (attrPos != -1 && d.bindPos()) {
+            context->glEnableVertexAttribArray(attrPos);
+            context->glVertexAttribPointer(attrPos, 4, GL_FLOAT, false, 0, NULL);
+        }
+        if (attrUV != -1 && d.bindUV()) {
+            context->glEnableVertexAttribArray(attrUV);
+            context->glVertexAttribPointer(attrUV, 2, GL_FLOAT, false, 0, NULL);
+        }
+
+
+
+        // Bind the index buffer and then draw shapes from it.
+        // This invokes the shader program, which accesses the vertex buffers.
+        d.bindIdxOpq();
+        context->glDrawElements(d.drawMode(), d.elemOpqCount(), GL_UNSIGNED_INT, 0);
+        if (attrPos != -1) context->glDisableVertexAttribArray(attrPos);
+        if (attrUV != -1) context->glDisableVertexAttribArray(attrUV);
+        context->printGLErrorLog();
 }

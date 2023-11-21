@@ -40,7 +40,6 @@ private:
     // We combine the X and Z coordinates of the Chunk's corner into one 64-bit int
     // so that we can use them as a key for the map, as objects like std::pairs or
     // glm::ivec2s are not hashable by default, so they cannot be used as keys.
-    std::unordered_map<int64_t, uPtr<Chunk>> m_chunks;
 
     // We will designate every 64 x 64 area of the world's x-z plane
     // as one "terrain generation zone". Every time the player moves
@@ -72,6 +71,8 @@ private:
 public:
     Terrain(OpenGLContext *context);
     ~Terrain();
+
+    std::unordered_map<int64_t, uPtr<Chunk>> m_chunks;
 
     // Instantiates a new Chunk and stores it in
     // our chunk map at the given coordinates.

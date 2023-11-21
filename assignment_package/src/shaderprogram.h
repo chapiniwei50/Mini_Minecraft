@@ -20,13 +20,15 @@ public:
     int attrCol; // A handle for the "in" vec4 representing vertex color in the vertex shader
     int attrPosOffset; // A handle for a vec3 used only in the instanced rendering shader
     int attrUV;  // A handle for the "in" vec4 representing UV
+    int attrUVFrameBuffer;
 
     int unifModel; // A handle for the "uniform" mat4 representing model matrix in the vertex shader
     int unifModelInvTr; // A handle for the "uniform" mat4 representing inverse transpose of the model matrix in the vertex shader
     int unifViewProj; // A handle for the "uniform" mat4 representing combined projection and view matrices in the vertex shader
     int unifColor; // A handle for the "uniform" vec4 representing color of geometry in the vertex shader
-
+    int unifEffectType;
     int unifSampler2D; // A handle to the "uniform" sampler2D that will be used to read the texture containing the scene render
+    int unifSamplerFrameBuffer;
     int unifTime; // A handle for the "uniform" float representing time in the shader
 
 public:
@@ -41,6 +43,7 @@ public:
     void setViewProjMatrix(const glm::mat4 &vp);
     // Pass the given color to this shader on the GPU
     void setGeometryColor(glm::vec4 color);
+    void seteffectType(const int type);
     // Draw the given object to our screen using this ShaderProgram's shaders
     void draw(Drawable &d, int textureSlot = 0);
     // Draw the given object to our screen multiple times using instanced rendering
@@ -54,6 +57,7 @@ public:
 
     // Draw objects using interleaved buffer
     void drawInterleaved(Drawable *d, bool opaque, int textureSlot = 0);
+    void drawEffect(Drawable &d);
 
     QString qTextFileRead(const char*);
 

@@ -39,23 +39,18 @@ void Player::processInputs(InputBundle &inputs) {
         }
     }
     else{
-        /*
-        if (inputs.wPressed) {
-            m_forward.y = 0;
-            m_acceleration = acc * glm::normalize(glm::vec3(m_forward.x, 0, m_forward.z));
-        } else if (inputs.sPressed) {
-            m_forward.y = 0;
-            m_acceleration = -acc * glm::normalize(glm::vec3(m_forward.x, 0, m_forward.z));
-        } else if (inputs.dPressed) {
-            m_right.y = 0;
-            m_acceleration = acc * glm::normalize(glm::vec3(m_right.x, 0, m_right.z));
-        } else if (inputs.aPressed) {
-            m_right.y = 0;
-            m_acceleration = -acc * glm::normalize(glm::vec3(m_right.x, 0, m_right.z));
-        } else */
         if (inputs.spacePressed) {
-            m_velocity.y = 40.f;
+            if (inputs.isInWater || inputs.isInLava) {
+                // Apply upward force for swimming
+                m_velocity += 5.0f * this->m_up;
+            }else if(inputs.isOnGround){
+                m_velocity.y = 40.f;
+            }
         }
+    }
+     if (inputs.isInWater || inputs.isInLava) {
+
+        m_velocity *= 0.66f;
     }
 
     if (glm::abs(inputs.mouseX) < 5 && glm::abs(inputs.mouseY) < 5) {
@@ -93,7 +88,56 @@ bool Player::isOnGround( const Terrain &terrain, InputBundle &input) {
             glm::vec3 checkPos = glm::vec3(floor(corner.x) + x,
                                            floor(corner.y) - 0.01f, // slightly below the player to ensure the block is indeed beneath
                                            floor(corner.z) + z);
-            return isBlockAt(checkPos, terrain);
+             if (terrain.m_chunks.size()>0 &&  isBlockAt(checkPos, terrain) && terrain.getBlockAt(checkPos) != EMPTY
+                && terrain.getBlockAt(checkPos) != WATER
+                && terrain.getBlockAt(checkPos) != LAVA) {
+                input.isOnGround = true;
+                std::cout << "ground" << std::endl;
+
+
+            } else {
+                input.isOnGround = false;
+            }
+        }
+    }
+    return input.isOnGround;
+
+}
+
+bool Player::isInWater( const Terrain &terrain, InputBundle &input) {
+
+    glm::vec3 corner = this->m_position + glm::vec3(0.5f, 1.5f, 0.5f);
+    for (int x = 0; x <= 1; ++x) {
+        for (int z = 0; z <= 1; ++z) {
+            glm::vec3 checkPos = glm::vec3(floor(corner.x) + x,
+                                           floor(corner.y) - 0.01f, // slightly below the player to ensure the block is indeed beneath
+                                           floor(corner.z) + z);
+            if (terrain.m_chunks.size()>0 && isBlockAt(checkPos, terrain) && terrain.getBlockAt(checkPos) == WATER) {
+                 input.isInWater= true;
+                   std::cout << "water" << std::endl;
+                return true;
+            }
+
+        }
+    }
+    return false; // return false if no ground is found after checking all corners
+}
+bool Player::isInLava( const Terrain &terrain, InputBundle &input) {
+
+
+    glm::vec3 corner = this->m_position + glm::vec3(0.5f, 1.5f, 0.5f);
+    for (int x = 0; x <= 1; ++x) {
+        for (int z = 0; z <= 1; ++z) {
+            glm::vec3 checkPos = glm::vec3(floor(corner.x) + x,
+                                           floor(corner.y) - 0.01f, // slightly below the player to ensure the block is indeed beneath
+                                           floor(corner.z) + z);
+            if (terrain.m_chunks.size()>0 &&isBlockAt(checkPos, terrain) && terrain.getBlockAt(checkPos) == LAVA) {
+                 input.isInLava= true;
+                std::cout << "lava" << std::endl;
+
+                return true;
+            }
+
         }
     }
     return false; // return false if no ground is found after checking all corners
@@ -107,6 +151,9 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
     const float friction = 0.9f;
     const glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
     if(!input.flight_mode){
+          isInWater(terrain, input);
+        isInLava(terrain, input);
+        isOnGround(terrain, input);
         m_acceleration += gravity;
     }
     m_velocity *= friction;
@@ -117,17 +164,6 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
     this->moveAlongVector(rayDir);
     m_velocity += m_acceleration * dT;
 
-    /*
-    if(!input.flight_mode){
-        if(isOnGround(terrain, input)){
-            m_velocity.y = 0;
-        }
-        else{
-            const glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
-            m_velocity += gravity * dT;
-            m_acceleration += gravity;
-        }
-    }*/
 
 }
 
@@ -220,7 +256,7 @@ bool Player::gridMarch(glm::vec3 rayOrigin, glm::vec3 rayDirection, const Terrai
         // If currCell contains something other than EMPTY, return
         // curr_t
         BlockType cellType = terrain.getBlockAt(currCell.x, currCell.y, currCell.z);
-        if(cellType != EMPTY) {
+        if(cellType != EMPTY & cellType != WATER && cellType != LAVA) {
             *out_blockHit = currCell;
             *out_dist = glm::min(maxLen, curr_t);
             return true;
