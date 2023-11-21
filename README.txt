@@ -52,3 +52,9 @@ Then, for multithreading terrain generation, I rearranged Han’s code to make i
 5. I also implemented the cave system for procedural generation using 3D Perlin noise.
 
 However, after the new rendering pipeline, the destroy and place block is not functioning. I will try to fix this problem. I am pushing this version at 11/17 now wishing to give other teammates who not yet start on milestone 2 a good place to start and test their code efficiently. The problem should be in the rendering as far as I am concerned. I will update as soon as the bug got fixed.
+
+Cindy:
+
+I implemented the post-process pipeline for overlay effects when the player's head is under water or under the lava. I added two shader files, WLoverlay.frag.glsl and WLoverlay.vert.glsl for the blue tint effect underwater and the red tint effect under lava. I also added functions in player.cpp like isonground, isinwater, and isinlava to check whether the player is standing on land, water, or lava. if the player is standing on water or lava, then it slowly sinks, with the velocity reduced to 2/3 of the original speed. and the player could move up with a constant speed when the space bar is pressed. I also fixed the jumping issue, where jumping by pressing the space bar only works when the player is standing on the ground. I also implemented the quad.cpp and quad.h where it creates a quad so we could apply the post process shader on the quad under water and under lava.
+
+Challenges: My computer had issues loading the texture files so I couldn't render the screen properly, but my team figured out later on how to fix it between using mac and windows. Our current implementation of water is only one layer, so once the player enters the water zone it would fall out and continue falling after, so we would have to fix that part by putting stone/dirt under water later on. 
