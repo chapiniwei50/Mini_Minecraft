@@ -3,7 +3,7 @@
 
 
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
-in vec2 vs_UV;
+in vec2 vs_UVFrameBuffer;
 in vec4 vs_Pos;
 
 
@@ -15,6 +15,6 @@ void main()
 {
     fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation
 
-    fs_UV = vs_UV;
+    fs_UV = vs_UVFrameBuffer;
     gl_Position = vs_Pos;
 }

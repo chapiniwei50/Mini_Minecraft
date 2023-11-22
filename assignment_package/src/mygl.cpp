@@ -55,13 +55,15 @@ void MyGL::initializeGL()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
     printGLErrorLog();
 
     // Create a Vertex Attribute Object
     glGenVertexArrays(1, &vao);
-    m_geomQuad.createVBOdata();
+
     m_frameBuffer.create();
+
+    m_geomQuad.createVBOdata();
+
     m_WLoverlay.create(":/glsl/WLoverlay.vert.glsl", ":/glsl/WLoverlay.frag.glsl");
     // Create and set up the flat lighting shader
     m_progFlat.create(":/glsl/flat.vert.glsl", ":/glsl/flat.frag.glsl");
@@ -91,14 +93,13 @@ void MyGL::initializeGL()
 #endif
 
 #ifdef Q_OS_WIN
-    m_terrain.create_load_texture("../textures/minecraft_textures_all.png");
+    m_terrain.create_load_texture("D:/local_documentation/major/CIS4600/mini-minecraft-mahjong/textures/minecraft_textures_all.png");
 #endif
 
     // We have to have a VAO bound in OpenGL 3.2 Core. But if we're not
     // using multiple VAOs, we can just bind one once.
     glBindVertexArray(vao);
 
-    //m_terrain.CreateTestScene();
     lastMousePosition = QPoint(0, 0);
 }
 
@@ -158,8 +159,6 @@ void MyGL::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
-    m_progLambert.setViewProjMatrix(m_player.mcr_camera.getViewProj());
-    //m_progInstanced.setViewProjMatrix(m_player.mcr_camera.getViewProj());
 
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
@@ -198,6 +197,7 @@ void MyGL::paintGL() {
 // terrain that surround the player (refer to Terrain::m_generatedTerrain
 // for more info)
 void MyGL::renderTerrain() {
+
     int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
     int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
     // draw opaque

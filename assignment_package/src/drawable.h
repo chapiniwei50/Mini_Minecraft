@@ -16,6 +16,7 @@ protected:
 
     GLuint m_bufUV;
     GLuint m_bufPos;
+
     bool m_idxOpqGenerated; // Set to TRUE by generateIdx(), returned by bindIdx().
     bool m_idxTraGenerated;
     bool m_bufDataOpqGenerated;
@@ -47,13 +48,11 @@ public:
 
     void generateDataOpq();
     void generateDataTra();
-
     void generateUV();
     void generatePos();
 
     bool bindIdxOpq();
     bool bindIdxTra();
-
 
     bool bindDataOpq();
     bool bindDataTra();
