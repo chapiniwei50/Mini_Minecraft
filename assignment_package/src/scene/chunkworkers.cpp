@@ -9,6 +9,7 @@ BlockGenerateWorker::BlockGenerateWorker(int x, int z, std::vector<Chunk*> chunk
 
 void BlockGenerateWorker::run() {
     try{
+        //std::cout << "Block Type, Thread " << QThread::currentThreadId() << " start." << std::endl;
         for (auto &chunk : m_chunksToFill) {
             mp_chunksCompletedLock->lock();
             mp_chunksCompletedLock->unlock();
@@ -17,6 +18,7 @@ void BlockGenerateWorker::run() {
             mp_chunksCompleted->insert(chunk);
             mp_chunksCompletedLock->unlock();
         }
+        //std::cout << "Block Type, Thread " << QThread::currentThreadId() << " end." << std::endl;
     }
     catch(const std::exception& e){
         std::cout << "Exception in block generation:" << e.what() << std::endl;
@@ -29,10 +31,12 @@ VBOWorker::VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData>* dat, 
 
 void VBOWorker::run() {
     try{
+        //std::cout << "VBO, Thread " << QThread::currentThreadId() << " start." << std::endl;
         mp_chunk->createVBOdata();
         mp_chunkVBOsCompletedLock->lock();
         mp_chunkVBOsCompleted->push_back(mp_chunk->vboData);
         mp_chunkVBOsCompletedLock->unlock();
+        //std::cout << "VBO, Thread " << QThread::currentThreadId() << " end." << std::endl;
     }
     catch(const std::exception& e){
         std::cout << "Exception in VBOWorker:" << e.what() << std::endl;

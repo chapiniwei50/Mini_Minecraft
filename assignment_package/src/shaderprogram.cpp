@@ -323,7 +323,6 @@ void ShaderProgram::printLinkInfoLog(int prog)
 
 
 void ShaderProgram::drawEffect(Drawable &d){
-    std::cout<<"draw"<<std::endl;
 
     useMe();
 

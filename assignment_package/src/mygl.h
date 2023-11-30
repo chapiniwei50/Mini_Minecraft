@@ -18,6 +18,7 @@
 #include <smartpointerhelp.h>
 #include <QDir>
 #include <QString>
+#include <ctime>
 
 class MyGL : public OpenGLContext
 {
