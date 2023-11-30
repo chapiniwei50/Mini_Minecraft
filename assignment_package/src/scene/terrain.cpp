@@ -262,11 +262,10 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
 
 }
 
-void Terrain::spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs) {
+void Terrain::spawnVBOWorkers(std::unordered_set<Chunk*> &chunksNeedingVBOs) {
     for (Chunk* c: chunksNeedingVBOs) {
         spawnVBOWorker(c);
     }
-    QThreadPool::globalInstance()->waitForDone();
 }
 
 void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
@@ -405,7 +404,7 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     const float terrainScale = 0.01f; // Terrain variation scale.
     const int baseHeight = 135;      // Base height for the terrain.
 
-    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.5 + 0.5;
+    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.05 + 0.5;
 
     float height = baseHeight;
 
@@ -414,14 +413,14 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
         b = BiomeType::PLAIN;
     } else if (biomeNoiseValue >= 0.6 && biomeNoiseValue <= 0.8) { // Desert
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 40 + 5;
         b = BiomeType::DESSERT;
     } else if (biomeNoiseValue > 0.8) { // Mountains
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
         b = BiomeType::MOUNTAIN;
     } else { // Transition between Plains and Desert
         float plainsHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
-        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 40 + 5;
         float smoothStepInput = (biomeNoiseValue - 0.4f) / 0.3f;
         float smoothStepResult = glm::smoothstep(0.25f, 0.75f, smoothStepInput);
         height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;

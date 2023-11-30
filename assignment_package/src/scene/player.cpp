@@ -48,6 +48,7 @@ void Player::processInputs(InputBundle &inputs) {
             }
         }
     }
+
      if (inputs.isInWater || inputs.isInLava) {
 
         m_velocity *= 0.66f;
@@ -92,7 +93,7 @@ bool Player::isOnGround( const Terrain &terrain, InputBundle &input) {
                 && terrain.getBlockAt(checkPos) != WATER
                 && terrain.getBlockAt(checkPos) != LAVA) {
                 input.isOnGround = true;
-                std::cout << "ground" << std::endl;
+                //std::cout << "ground" << std::endl;
 
 
             } else {
@@ -114,7 +115,7 @@ bool Player::isInWater( const Terrain &terrain, InputBundle &input) {
                                            floor(corner.z) + z);
             if (terrain.m_chunks.size()>0 && isBlockAt(checkPos, terrain) && terrain.getBlockAt(checkPos) == WATER) {
                  input.isInWater= true;
-                   std::cout << "water" << std::endl;
+                   //std::cout << "water" << std::endl;
                 return true;
             }
 
@@ -133,7 +134,6 @@ bool Player::isInLava( const Terrain &terrain, InputBundle &input) {
                                            floor(corner.z) + z);
             if (terrain.m_chunks.size()>0 &&isBlockAt(checkPos, terrain) && terrain.getBlockAt(checkPos) == LAVA) {
                  input.isInLava= true;
-                std::cout << "lava" << std::endl;
 
                 return true;
             }

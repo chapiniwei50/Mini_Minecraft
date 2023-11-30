@@ -114,7 +114,7 @@ public:
     void multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos);
     std::unordered_set<int64_t> borderingZone(glm::ivec2 zone, int radius) const;
     void spawnVBOWorker(Chunk* c);
-    void spawnVBOWorkers(const std::unordered_set<Chunk*> &chunksNeedingVBOs);
+    void spawnVBOWorkers(std::unordered_set<Chunk *> &chunksNeedingVBOs);
     void spawnBlockTypeWorker(int64_t zone);
 
     float PerlinNoise2D(float x, float z, float frequency, int octaves);

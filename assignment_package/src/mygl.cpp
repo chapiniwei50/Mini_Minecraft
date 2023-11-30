@@ -127,16 +127,13 @@ void MyGL::resizeGL(int w, int h) {
 // all per-frame actions here, such as performing physics updates on all
 // entities in the scene.
 void MyGL::tick() {
-
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     float deltaT = (currentTime - m_lastTime) * 0.001;
     m_lastTime = currentTime;
     m_player.tick(deltaT, m_inputs);
-    //m_terrain.check_edge(m_player.mcr_position.x, m_player.mcr_position.z);
     m_terrain.multithreadedTerrainUpdate(m_player.mcr_position, m_player.mcr_lastFramePosition);
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
     sendPlayerDataToGUI(); // Updates the info in the secondary window displaying player data
-
 }
 
 void MyGL::sendPlayerDataToGUI() const {
@@ -156,10 +153,12 @@ void MyGL::sendPlayerDataToGUI() const {
 // so paintGL() called at a rate of 60 frames per second.
 void MyGL::paintGL() {
     // Clear the screen so that we only see newly drawn images
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
 
+    m_frameBuffer.bindFrameBuffer();
+    glViewport(0, 0, this->width(), this->height());
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
@@ -169,28 +168,30 @@ void MyGL::paintGL() {
     m_progFlat.setTime(m_time);
     m_time++;
 
-    glDisable(GL_DEPTH_TEST); 
+    glDisable(GL_DEPTH_TEST);
     m_progFlat.setModelMatrix(glm::mat4());
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     glEnable(GL_DEPTH_TEST);
 
+    // If in water
     if (m_terrain.m_chunks.size()>0 && m_player.isInWater(m_terrain, m_inputs)) {
-        std::cout<<"in water!"<<std::endl;
-        m_frameBuffer.bindFrameBuffer();
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        m_WLoverlay.useMe();
         m_WLoverlay.seteffectType(1);
-        m_frameBuffer.bindToTextureSlot(0);
-        std::cout<<glCheckFramebufferStatus(GL_FRAMEBUFFER)<<std::endl;
-
-        m_WLoverlay.drawEffect(m_geomQuad);
+        // If in lava
     } else if (m_terrain.m_chunks.size()>0 &&m_player.isInLava(m_terrain, m_inputs)) {
         m_WLoverlay.seteffectType(2);
-        m_frameBuffer.bindToTextureSlot(0);
-        m_WLoverlay.drawEffect(m_geomQuad);
+        // If in air
     } else {
         m_WLoverlay.seteffectType(0);
+
     }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
+    glViewport(0, 0, this->width() *  this->devicePixelRatio(), this->height() *  this->devicePixelRatio());
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    m_WLoverlay.useMe();
+    m_frameBuffer.bindToTextureSlot(0);
+
+    m_WLoverlay.drawEffect(m_geomQuad);
 }
 
 // TODO: Change this so it renders the nine zones of generated

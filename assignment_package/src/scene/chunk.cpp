@@ -398,20 +398,18 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
         }
     }
 
-
-    // Generate Cave (Optional, depending on your implementation)
     /*
-    for (int y = 1; y < 32; ++y) {
+    for (int y = 1; y < 64; ++y) {
         float noiseValue = PerlinNoise3D(glm::vec3(x, y, z) * 0.05f);
         if (noiseValue < 0 && getBlockAt(x, y, z) == STONE)  {
             setBlockAt(x, y, z, EMPTY);
         }
         if (y < 25) {
             // Change for future LAVA
-            setBlockAt(x, y, z, EMPTY);
+            setBlockAt(x, y, z, LAVA);
         }
-    }
-    */
+    }*/
+
 }
 
 void Chunk::refreshChunkVBOData(){
