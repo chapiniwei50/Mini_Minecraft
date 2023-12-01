@@ -93,7 +93,8 @@ void MyGL::initializeGL()
 #endif
 
 #ifdef Q_OS_WIN
-    m_terrain.create_load_texture("D:/local_documentation/major/CIS4600/mini-minecraft-mahjong/textures/minecraft_textures_all.png");
+    //m_terrain.create_load_texture("D:/local_documentation/major/CIS4600/mini-minecraft-mahjong/textures/minecraft_textures_all.png");
+    m_terrain.create_load_texture(":/textures/minecraft_textures_all.png");
 #endif
 
     // We have to have a VAO bound in OpenGL 3.2 Core. But if we're not

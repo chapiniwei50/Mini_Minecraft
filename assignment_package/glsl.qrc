@@ -7,5 +7,8 @@
         <file>glsl/instanced.vert.glsl</file>
         <file>glsl/WLoverlay.frag.glsl</file>
         <file>glsl/WLoverlay.vert.glsl</file>
+        <file>textures/minecraft_normals_all.png</file>
+        <file>textures/minecraft_textures_all.png</file>
     </qresource>
+    <qresource prefix="/textures"/>
 </RCC>
