@@ -14,6 +14,7 @@ in vec4 vs_UV;
 out vec3 fs_UV;
 out vec4 fs_Nor;
 out vec4 fs_LightVec;
+out vec3 fs_Pos;
 
 const vec4 lightDir = normalize(vec4(0.5, 1, 0.75, 0));
 
@@ -28,6 +29,9 @@ void main()
     vec4 modelposition = u_Model * vs_Pos;
 
     fs_LightVec = (lightDir);
+
+    vec4 worldPos = u_Model * vs_Pos;
+    fs_Pos = worldPos.xyz;
 
     //built-in things to pass down the pipeline
     gl_Position = u_ViewProj * modelposition;

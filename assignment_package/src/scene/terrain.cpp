@@ -197,7 +197,7 @@ std::unordered_set<int64_t> Terrain::borderingZone(glm::ivec2 zone, int radius) 
     return result;
 }
 
-void Terrain::initializeTerrainGeneration(glm::vec3 currentPlayerPos){
+void Terrain::initialTerrainGeneration(glm::vec3 currentPlayerPos){
     const int zoneRadius = 2;
     glm::ivec2 currentZone(64.f * glm::floor(currentPlayerPos.x / 64.f), 64.f * glm::floor(currentPlayerPos.z / 64.f));
     std::unordered_set<int64_t> currentNearZones = borderingZone(currentZone, zoneRadius);

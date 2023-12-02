@@ -63,4 +63,6 @@ public:
 
     void removeBlock();
     void addBlock(Terrain *terrain);
+
+    void processCameraRotation(float thetaChange, float phiChange);
 };

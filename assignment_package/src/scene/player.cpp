@@ -58,23 +58,20 @@ void Player::processInputs(InputBundle &inputs) {
         return;
     }
 
+}
 
-#ifdef Q_OS_WIN
+void Player::processCameraRotation(float thetaChange, float phiChange){
     auto clamp = [](float value, float minVal, float maxVal) -> float {
         return std::max(minVal, std::min(value, maxVal));
     };
 
     glm::vec2 cameraOrientationOrigin = m_cameraOrientation;
-    float thetaChange = 0.2 * inputs.mouseX;
     m_cameraOrientation.x = std::fmod(m_cameraOrientation.x + thetaChange, 360);
-    float phiChange = 0.2 * inputs.mouseY;
     m_cameraOrientation.y = clamp(m_cameraOrientation.y + phiChange, -89.9999, 89.9999);
     phiChange = m_cameraOrientation.y - cameraOrientationOrigin.y;
 
     rotateOnUpGlobal(thetaChange);
     rotateOnRightLocal(phiChange);
-#endif
-
 }
 bool Player::isBlockAt( glm::vec3& position, const Terrain& terrain) {
     return terrain.getBlockAt(position) != EMPTY;
@@ -326,8 +323,6 @@ void Player::removeBlock() {
         }
     }
 }
-
-
 
 void Player::setCameraWidthHeight(unsigned int w, unsigned int h) {
     m_camera.setWidthHeight(w, h);

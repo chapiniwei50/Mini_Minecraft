@@ -102,6 +102,8 @@ void MyGL::initializeGL()
     glBindVertexArray(vao);
 
     lastMousePosition = QPoint(0, 0);
+
+    m_terrain.initialTerrainGeneration(m_player.mcr_position);
 }
 
 void MyGL::resizeGL(int w, int h) {
@@ -168,6 +170,7 @@ void MyGL::paintGL() {
     // update time for shader
     m_progFlat.setTime(m_time);
     m_time++;
+    m_progFlat.setCameraPosition(m_player.mcr_camera.mcr_position);
 
     glDisable(GL_DEPTH_TEST);
     m_progFlat.setModelMatrix(glm::mat4());
@@ -222,8 +225,6 @@ void MyGL::keyPressEvent(QKeyEvent *e) {
     // chain of if statements instead
     if (e->key() == Qt::Key_Escape) {
         QApplication::quit();
-    } else if (e->key() == Qt::Key_L) {
-        m_terrain.initializeTerrainGeneration(m_player.mcr_position);
     } else if (e->key() == Qt::Key_W) {
         m_inputs.wPressed = true;
     } else if (e->key() == Qt::Key_S) {
@@ -282,6 +283,7 @@ void MyGL::keyReleaseEvent(QKeyEvent *e) {
 void MyGL::mouseMoveEvent(QMouseEvent *e) {
 
 #ifdef Q_OS_WIN
+
     QPoint mousePos = e->pos();
     QPoint centerPos = QPoint(width() / 2, height() / 2);
     if (this->hasFocus()){
@@ -292,6 +294,8 @@ void MyGL::mouseMoveEvent(QMouseEvent *e) {
         m_inputs.mouseX = 0;
         m_inputs.mouseY = 0;
     }
+    m_player.processCameraRotation(m_inputs.mouseX,m_inputs.mouseY);
+
 #endif
 
 #ifdef Q_OS_MAC
@@ -301,7 +305,6 @@ void MyGL::mouseMoveEvent(QMouseEvent *e) {
     m_player.rotateOnUpGlobal(dx);
     m_player.rotateOnRightLocal(dy);
 #endif
-
 
 }
 
