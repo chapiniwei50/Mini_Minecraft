@@ -37,6 +37,18 @@ void MyGL::moveMouseToCenter() {
     QCursor::setPos(this->mapToGlobal(QPoint(width() / 2, height() / 2)));
 }
 
+void MyGL::setDepthBuffer(){
+    QOpenGLFramebufferObjectFormat fboFormat;
+    fboFormat.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+    // Or, for depth buffer only:
+    // fboFormat.setAttachment(QOpenGLFramebufferObject::Depth);
+
+    fboFormat.setSamples(4);
+    fboFormat.setInternalTextureFormat(GL_RGBA8);
+
+    //m_frameBuffer = new QOpenGLFramebufferObject(this->width(), this->height(), fboFormat);
+}
+
 void MyGL::initializeGL()
 {
     // Create an OpenGL context using Qt's QOpenGLFunctions_3_2_Core class
@@ -44,6 +56,7 @@ void MyGL::initializeGL()
     initializeOpenGLFunctions();
     // Print out some information about the current OpenGL context
     debugContextVersion();
+    setDepthBuffer();
 
     // Set a few settings/modes in OpenGL rendering
     glEnable(GL_DEPTH_TEST);

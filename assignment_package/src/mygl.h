@@ -15,6 +15,7 @@
 
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLFramebufferObjectFormat>
 #include <smartpointerhelp.h>
 #include <QDir>
 #include <QString>
@@ -52,7 +53,7 @@ private:
 
     int m_time; // another timer for shader programs cuz I don't know how to use QTimer haha.
 
-    //void setDepthBuffer();
+    void setDepthBuffer();
 
 public:
     explicit MyGL(QWidget *parent = nullptr);

@@ -22,6 +22,7 @@ void main()
         vec3 viewDir = normalize(fs_Pos - u_CameraPos);
         vec3 reflectedDir = reflect(viewDir, normalize(fs_Nor.xyz));
 
+
         vec3 currentPos = fs_Pos;
         float totalDistance = 0.0;
         const float maxStepDistance = 15.0;
@@ -31,7 +32,8 @@ void main()
         bool hitSomething = false;
         vec4 reflectedColor = vec4(0.0);
 
-        while (totalDistance < maxStepDistance) {
+        while (totalDistance < maxStepDistance)
+        {
                 currentPos += stepSize * reflectedDir;  // Step forward
                 totalDistance += stepSize;
 
@@ -44,10 +46,11 @@ void main()
                 //     hitSomething = true;
                 //     break;
                 // }
-            }
+        }
 
-            // 如果击中了物体，则使用反射颜色，否则使用原始颜色
-            //diffuseColor = hitSomething ? reflectedColor : texture(u_Texture, fs_UV.xy);
+        // 如果击中了物体，则使用反射颜色，否则使用原始颜色
+        //diffuseColor = hitSomething ? reflectedColor : texture(u_Texture, fs_UV.xy);
+
     }
     else if (abs(fs_UV.z - 0.5) < 0.001)  // LAVA
     {
