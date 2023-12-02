@@ -15,14 +15,19 @@ void main()
 {
     vec4 diffuseColor;
 
-    if (fs_UV.z > 0.5)  // block that need animate
+    if (abs(fs_UV.z - 1.0) < 0.001)  // WATER
     {
         float time_offset = (u_Time % 500) / 500.0;
         diffuseColor = texture(u_Texture, fs_UV.xy + vec2(1.0/16.0, 1.0/16.0) * time_offset);
     }
-    else
+    else if (abs(fs_UV.z - 0.5) < 0.001)  // LAVA
+    {
+        float time_offset = (u_Time % 500) / 500.0;
+        diffuseColor = texture(u_Texture, fs_UV.xy + vec2(1.0/16.0, 1.0/16.0) * time_offset);
+    }
+    else{
         diffuseColor = texture(u_Texture, fs_UV.xy);
-
+    }
     // Calculate the diffuse term for Lambert shading
     float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
     // Avoid negative lighting values

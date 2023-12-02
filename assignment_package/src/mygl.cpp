@@ -222,6 +222,8 @@ void MyGL::keyPressEvent(QKeyEvent *e) {
     // chain of if statements instead
     if (e->key() == Qt::Key_Escape) {
         QApplication::quit();
+    } else if (e->key() == Qt::Key_L) {
+        m_terrain.initializeTerrainGeneration(m_player.mcr_position);
     } else if (e->key() == Qt::Key_W) {
         m_inputs.wPressed = true;
     } else if (e->key() == Qt::Key_S) {

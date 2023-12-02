@@ -116,6 +116,7 @@ public:
     void spawnVBOWorker(Chunk* c);
     void spawnVBOWorkers(std::unordered_set<Chunk *> &chunksNeedingVBOs);
     void spawnBlockTypeWorker(int64_t zone);
+    void initializeTerrainGeneration(glm::vec3 currentPlayerPos);
 
     float PerlinNoise2D(float x, float z, float frequency, int octaves);
     float PerlinNoise3D(glm::vec3 p);

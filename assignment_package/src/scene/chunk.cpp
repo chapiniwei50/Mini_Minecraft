@@ -134,8 +134,10 @@ void Chunk::createVBOdata()
                 if ((boundary_info & 0b100000) != 0)
                 {
                     uv = glm::vec4(blockFaceUVs.at(t).at(XNEG), 0, 0);
-                    if (t == WATER || t == LAVA)  // add a flag that this flag should animate in shader
+                    if (t == WATER)  // WATER
                         uv[2] = 1.0;
+                    if (t == LAVA)  // LAVA
+                        uv[2] = 0.5;
 
                     data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
@@ -158,8 +160,10 @@ void Chunk::createVBOdata()
                 if ((boundary_info & 0b010000) != 0)
                 {
                     uv = glm::vec4(blockFaceUVs.at(t).at(XPOS), 0, 0);
-                    if (t == WATER || t == LAVA)
+                    if (t == WATER)  // WATER
                         uv[2] = 1.0;
+                    if (t == LAVA)  // LAVA
+                        uv[2] = 0.5;
 
                     data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
@@ -182,8 +186,10 @@ void Chunk::createVBOdata()
                 if ((boundary_info & 0b001000) != 0)
                 {
                     uv = glm::vec4(blockFaceUVs.at(t).at(YNEG), 0, 0);
-                    if (t == WATER || t == LAVA)
+                    if (t == WATER)  // WATER
                         uv[2] = 1.0;
+                    if (t == LAVA)  // LAVA
+                        uv[2] = 0.5;
 
                     data_to_push.push_back(glm::vec4(1.0 + x + minX, 0.0 + y, 1.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(0.0, -1.0, 0.0, 0.0));
@@ -206,8 +212,10 @@ void Chunk::createVBOdata()
                 if ((boundary_info & 0b000100) != 0)
                 {
                     uv = glm::vec4(blockFaceUVs.at(t).at(YPOS), 0, 0);
-                    if (t == WATER || t == LAVA)
+                    if (t == WATER)  // WATER
                         uv[2] = 1.0;
+                    if (t == LAVA)  // LAVA
+                        uv[2] = 0.5;
 
                     data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
@@ -230,8 +238,10 @@ void Chunk::createVBOdata()
                 if ((boundary_info & 0b000010) != 0)
                 {
                     uv = glm::vec4(blockFaceUVs.at(t).at(ZNEG), 0, 0);
-                    if (t == WATER || t == LAVA)
+                    if (t == WATER)  // WATER
                         uv[2] = 1.0;
+                    if (t == LAVA)  // LAVA
+                        uv[2] = 0.5;
 
                     data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
@@ -254,8 +264,10 @@ void Chunk::createVBOdata()
                 if ((boundary_info & 0b000001) != 0)
                 {
                     uv = glm::vec4(blockFaceUVs.at(t).at(ZPOS), 0, 0);
-                    if (t == WATER || t == LAVA)
+                    if (t == WATER)  // WATER
                         uv[2] = 1.0;
+                    if (t == LAVA)  // LAVA
+                        uv[2] = 0.5;
 
                     data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
