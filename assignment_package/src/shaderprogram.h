@@ -61,6 +61,7 @@ public:
     void drawInterleaved(Drawable *d, bool opaque, int textureSlot = 0);
     void drawEffect(Drawable &d);
 
+
     QString qTextFileRead(const char*);
 
     void setTime(int t);

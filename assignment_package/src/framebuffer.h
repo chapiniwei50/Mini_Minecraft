@@ -19,6 +19,7 @@ private:
     GLuint m_outputTexture;
     GLuint m_depthRenderBuffer;
 
+
     unsigned int m_width, m_height, m_devicePixelRatio;
     bool m_created;
 
@@ -36,5 +37,6 @@ public:
     void bindFrameBuffer();
     // Associate our output texture with the indicated texture slot
     void bindToTextureSlot(unsigned int slot);
+    GLuint m_depthTexture;
     unsigned int getTextureSlot() const;
 };

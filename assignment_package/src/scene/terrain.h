@@ -68,6 +68,8 @@ private:
     // the texture that applies to all chunks
     uPtr<Texture> mp_texture;
 
+
+
 public:
     Terrain(OpenGLContext *context);
     ~Terrain();
@@ -127,5 +129,8 @@ public:
 
     // init texture file
     void create_load_texture(const char *textureFile);
+
+    // Visible distance
+    const int zoneRadius = 4;
 
 };

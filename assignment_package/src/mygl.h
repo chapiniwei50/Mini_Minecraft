@@ -28,11 +28,12 @@ private:
     ShaderProgram m_progLambert;// A shader program that uses lambertian reflection
     ShaderProgram m_progFlat;// A shader program that uses "flat" reflection (no shadowing at all)
     ShaderProgram m_WLoverlay; // A shader program for overlay of being underwater and underlava
-
+    ShaderProgram m_depth; //
 
     GLuint vao; // A handle for our vertex array object. This will store the VBOs created in our geometry classes.
         // Don't worry too much about this. Just know it is necessary in order to render geometry.
 
+    GLuint fbo;
 
     Terrain m_terrain; // All of the Chunks that currently comprise the world.
     Player m_player; // The entity controlled by the user. Contains a camera to display what it sees as well.
@@ -53,7 +54,13 @@ private:
 
     int m_time; // another timer for shader programs cuz I don't know how to use QTimer haha.
 
-    void setDepthBuffer();
+    void setDepthFBO();
+
+    // Called from paintGL().
+    // Calls Terrain::draw().
+    void renderTerrain();
+    void renderDepthView();
+    void renderOverlay();
 
 public:
     explicit MyGL(QWidget *parent = nullptr);
@@ -70,9 +77,7 @@ public:
     // In the base code, update() is called from tick().
     void paintGL() override;
 
-    // Called from paintGL().
-    // Calls Terrain::draw().
-    void renderTerrain();
+
 
 protected:
     // Automatically invoked when the user

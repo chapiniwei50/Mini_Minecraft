@@ -145,6 +145,10 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
     // TODO: Update the Player's position based on its
     // and velocity, and also perform collision detection.
 
+    ///Clamp the value of dT, if the time interval between frames was too big,
+    ///then dT will not work correctly.
+    if(dT>1.0) dT = 0.1f;
+
     const float friction = 0.9f;
     const glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
     if(!input.flight_mode){

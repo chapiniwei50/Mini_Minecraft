@@ -359,3 +359,4 @@ void ShaderProgram::drawEffect(Drawable &d){
     if (attrUVFrameBuffer != -1) context->glDisableVertexAttribArray(attrUVFrameBuffer);
     context->printGLErrorLog();
 }
+

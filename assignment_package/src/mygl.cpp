@@ -12,7 +12,7 @@ MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
     m_progLambert(this), m_progFlat(this),
     m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch()),m_WLoverlay(this), m_geomQuad(this),
-    m_frameBuffer(this, this->width(), this->height(), this->devicePixelRatio()),
+    m_frameBuffer(this, this->width(), this->height(), this->devicePixelRatio()),m_depth(this),
     m_time(0)
 {
     // Connect the timer to a function so that when the timer ticks the function is executed
@@ -37,16 +37,16 @@ void MyGL::moveMouseToCenter() {
     QCursor::setPos(this->mapToGlobal(QPoint(width() / 2, height() / 2)));
 }
 
-void MyGL::setDepthBuffer(){
-    QOpenGLFramebufferObjectFormat fboFormat;
-    fboFormat.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    // Or, for depth buffer only:
-    // fboFormat.setAttachment(QOpenGLFramebufferObject::Depth);
-
-    fboFormat.setSamples(4);
-    fboFormat.setInternalTextureFormat(GL_RGBA8);
-
-    //m_frameBuffer = new QOpenGLFramebufferObject(this->width(), this->height(), fboFormat);
+void MyGL::setDepthFBO(){
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_frameBuffer.m_depthTexture, 0);
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Error: Framebuffer is not complete!" << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void MyGL::initializeGL()
@@ -56,8 +56,6 @@ void MyGL::initializeGL()
     initializeOpenGLFunctions();
     // Print out some information about the current OpenGL context
     debugContextVersion();
-    setDepthBuffer();
-
     // Set a few settings/modes in OpenGL rendering
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -74,7 +72,7 @@ void MyGL::initializeGL()
     glGenVertexArrays(1, &vao);
 
     m_frameBuffer.create();
-
+    setDepthFBO();
     m_geomQuad.createVBOdata();
 
     m_WLoverlay.create(":/glsl/WLoverlay.vert.glsl", ":/glsl/WLoverlay.frag.glsl");
@@ -82,7 +80,7 @@ void MyGL::initializeGL()
     m_progFlat.create(":/glsl/flat.vert.glsl", ":/glsl/flat.frag.glsl");
     // Create and set up the diffuse shader
     m_progLambert.create(":/glsl/lambert.vert.glsl", ":/glsl/lambert.frag.glsl");
-    //m_progInstanced.create(":/glsl/instanced.vert.glsl", ":/glsl/lambert.frag.glsl");
+    m_depth.create(":/glsl/depth.vert.glsl", ":/glsl/depth.frag.glsl");
 
     // Set a color with which to draw geometry.
     // This will ultimately not be used when you change
@@ -170,7 +168,44 @@ void MyGL::sendPlayerDataToGUI() const {
 void MyGL::paintGL() {
     // Clear the screen so that we only see newly drawn images
 
-    m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
+    renderDepthView();
+    renderTerrain();
+    renderOverlay();
+
+}
+
+void MyGL::renderDepthView(){
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, this->width(), this->height());
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+    glFrontFace(GL_CW);
+    glCullFace(GL_BACK);
+
+    m_progFlat.useMe();
+    m_frameBuffer.bindToTextureSlot(1);
+    GLint depthTexUniform = glGetUniformLocation(m_progFlat.prog, "u_DepthTexture");
+    glUniform1i(depthTexUniform, 1);
+
+    m_depth.useMe();
+    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
+    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
+    // draw opaque
+    int drawBlockSize = m_terrain.zoneRadius * 32;
+    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_depth, true);
+
+    glDisable(GL_DEPTH_TEST);
+    m_depth.setModelMatrix(glm::mat4());
+    m_depth.setViewProjMatrix(m_player.mcr_camera.getViewProj());
+    glEnable(GL_DEPTH_TEST);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
+}
+
+// TODO: Change this so it renders the nine zones of generated
+// terrain that surround the player (refer to Terrain::m_generatedTerrain
+// for more info)
+void MyGL::renderTerrain() {
 
     m_frameBuffer.bindFrameBuffer();
     glViewport(0, 0, this->width(), this->height());
@@ -178,18 +213,30 @@ void MyGL::paintGL() {
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
-    renderTerrain();
+
+    m_progFlat.useMe();
+    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
+    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
+
+    int drawBlockSize = m_terrain.zoneRadius * 32;
+    // draw opaque
+    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, true);
+    // draw transparent
+    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, false);
 
     // update time for shader
     m_progFlat.setTime(m_time);
     m_time++;
     m_progFlat.setCameraPosition(m_player.mcr_camera.mcr_position);
 
+    //set model and view matrix
     glDisable(GL_DEPTH_TEST);
     m_progFlat.setModelMatrix(glm::mat4());
     m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
     glEnable(GL_DEPTH_TEST);
+}
 
+void MyGL::renderOverlay(){
     // If in water
     if (m_terrain.m_chunks.size()>0 && m_player.isInWater(m_terrain, m_inputs)) {
         m_WLoverlay.seteffectType(1);
@@ -201,30 +248,13 @@ void MyGL::paintGL() {
         m_WLoverlay.seteffectType(0);
 
     }
-
     glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
     glViewport(0, 0, this->width() *  this->devicePixelRatio(), this->height() *  this->devicePixelRatio());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     m_WLoverlay.useMe();
     m_frameBuffer.bindToTextureSlot(0);
-
     m_WLoverlay.drawEffect(m_geomQuad);
 }
-
-// TODO: Change this so it renders the nine zones of generated
-// terrain that surround the player (refer to Terrain::m_generatedTerrain
-// for more info)
-void MyGL::renderTerrain() {
-
-    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
-    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
-    // draw opaque
-    m_terrain.draw(x - 64, x + 64, z - 64, z + 64, &m_progFlat, true);
-    // draw transparent
-    m_terrain.draw(x - 64, x + 64, z - 64, z + 64, &m_progFlat, false);
-}
-
-
 
 void MyGL::keyPressEvent(QKeyEvent *e) {
     float amount = 2.0f;
