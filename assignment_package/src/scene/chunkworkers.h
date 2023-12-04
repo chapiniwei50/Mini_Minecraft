@@ -29,7 +29,6 @@ private:
     std::vector<ChunkOpaqueTransparentVBOData*>* mp_chunkVBOsCompleted;
     QMutex *mp_chunkVBOsCompletedLock;
     Terrain* m_terrain;
-
 public:
     VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData*>* dat, QMutex * datLock, Terrain* m) ;
     void run() override;

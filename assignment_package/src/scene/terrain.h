@@ -62,6 +62,7 @@ private:
     QMutex m_chunksThatHaveBlockDataLock;
     std::vector<ChunkOpaqueTransparentVBOData*> m_chunksThatHaveVBOs;
     QMutex m_chunksThatHaveVBOsLock;
+    std::vector<int64_t> block_to_generate_id;
     int m_chunkCreated;
     //mutable QMutex m_chunksMutex;
 
@@ -116,8 +117,10 @@ public:
     void multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos);
     std::unordered_set<int64_t> borderingZone(glm::ivec2 zone, int radius) const;
     void spawnVBOWorker(Chunk* c);
-    void spawnVBOWorkers(std::unordered_set<Chunk *> &chunksNeedingVBOs);
+    void spawnVBOWorkers(std::unordered_set<Chunk *> &chunksNeedingVBOs, int n);
     void spawnBlockTypeWorker(int64_t zone);
+    void spawnBlockTypeWorkers(int n);
+    void bind_terrain_vbo_data(int n);
     void initialTerrainGeneration(glm::vec3 currentPlayerPos);
 
     float PerlinNoise2D(float x, float z, float frequency, int octaves);
