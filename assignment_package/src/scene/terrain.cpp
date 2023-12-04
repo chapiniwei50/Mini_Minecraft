@@ -207,7 +207,6 @@ void Terrain::initialTerrainGeneration(glm::vec3 currentPlayerPos){
         if (m_generatedTerrain.count(id) == 0) {
             spawnBlockTypeWorker(id);
         }
-
         //There is no previously generated block, obviously
     }
     QThreadPool::globalInstance()->waitForDone();
@@ -216,15 +215,15 @@ void Terrain::initialTerrainGeneration(glm::vec3 currentPlayerPos){
 
     //Generate VBO for newly generated chunks
     m_chunksThatHaveBlockDataLock.lock();
-    spawnVBOWorkers(m_chunksThatHaveBlockData);
-    m_chunksThatHaveBlockData.clear();
+    spawnVBOWorkers(m_chunksThatHaveBlockData, m_chunksThatHaveBlockData.size());
+    //m_chunksThatHaveBlockData.clear();
     m_chunksThatHaveBlockDataLock.unlock();
     QThreadPool::globalInstance()->waitForDone();
 
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
-    for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
-        cd.mp_chunk->bindVBOdata();
+    for (ChunkOpaqueTransparentVBOData* cd : m_chunksThatHaveVBOs) {
+        cd->mp_chunk->bindVBOdata();
     }
     if (m_chunkCreated < 25 * 4 * 4) {
         m_chunkCreated += m_chunksThatHaveVBOs.size();
@@ -240,72 +239,94 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
     glm::ivec2 currentZone(64.f * glm::floor(currentPlayerPos.x / 64.f), 64.f * glm::floor(currentPlayerPos.z / 64.f));
     glm::ivec2 previousZone(64.f * glm::floor(previousPlayerPos.x / 64.f), 64.f * glm::floor(previousPlayerPos.z / 64.f));
 
-    if(currentZone == previousZone){
-        return;
-    }
+    if (currentZone != previousZone){  // start generate new terrains
 
-    std::unordered_set<int64_t> currentNearZones = borderingZone(currentZone, zoneRadius);
-    std::unordered_set<int64_t> previousNearZones = borderingZone(previousZone, zoneRadius);
+        std::unordered_set<int64_t> currentNearZones = borderingZone(currentZone, zoneRadius);
+        std::unordered_set<int64_t> previousNearZones = borderingZone(previousZone, zoneRadius);
 
-    for (auto id : currentNearZones) {
-        //This zone id is ungenerated
-        if (m_generatedTerrain.count(id) == 0) {
-            spawnBlockTypeWorker(id);
+        for (auto id : currentNearZones) {
+            //This zone id is ungenerated
+            if (m_generatedTerrain.count(id) == 0) {
+                //spawnBlockTypeWorker(id);
+                block_to_generate_id.push_back(id);
+            }
         }
 
-        //This zone id is generated but it is not in the VBO
-        if (m_generatedTerrain.count(id) != 0 && previousNearZones.count(id) == 0) {
-            glm::ivec2 coord = toCoords(id);
-            for (int x = coord.x; x < coord.x + 64; x += 16) {
-                for (int z = coord.y; z < coord.y + 64; z += 16) {
-                    auto & chunk = getChunkAt(x, z);
-                    spawnVBOWorker(chunk.get());
+        for (auto id : previousNearZones) {
+            if (currentNearZones.count(id) == 0) {
+                glm::ivec2 coord = toCoords(id);
+                for (int x = coord.x; x < coord.x + 64; x += 16) {
+                    for (int z = coord.y; z < coord.y + 64; z += 16) {
+                        auto& chunk = getChunkAt(x, z);
+                        if(chunk) chunk->destroyVBOdata();
+                    }
                 }
             }
         }
     }
 
-    for (auto id : previousNearZones) {
-        if (currentNearZones.count(id) == 0) {
-            glm::ivec2 coord = toCoords(id);
-            for (int x = coord.x; x < coord.x + 64; x += 16) {
-                for (int z = coord.y; z < coord.y + 64; z += 16) {
-                    auto& chunk = getChunkAt(x, z);
-                    if(chunk) chunk->destroyVBOdata();
-                }
-            }
-        }
-    }
+    // Generate n = 1 Block Data each tick
+    spawnBlockTypeWorkers(1);
+    fprintf(stderr, "%d\t", block_to_generate_id.size());
 
     //Generate VBO for newly generated terrain
     m_chunksThatHaveBlockDataLock.lock();
-    spawnVBOWorkers(m_chunksThatHaveBlockData);
-    m_chunksThatHaveBlockData.clear();
+    fprintf(stderr, "%d\t", m_chunksThatHaveBlockData.size());
+    spawnVBOWorkers(m_chunksThatHaveBlockData, 4);
     m_chunksThatHaveBlockDataLock.unlock();
-    QThreadPool::globalInstance()->waitForDone();
+    //QThreadPool::globalInstance()->waitForDone();
 
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
-    for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
-        cd.mp_chunk->bindVBOdata();
-    }
-    if (m_chunkCreated < 25 * 4 * 4) {
-       m_chunkCreated += m_chunksThatHaveVBOs.size();
-    }
-    m_chunksThatHaveVBOs.clear();
+    fprintf(stderr, "%d\n", m_chunksThatHaveVBOs.size());
+    bind_terrain_vbo_data(4);
+//    for (ChunkOpaqueTransparentVBOData* cd : m_chunksThatHaveVBOs) {
+//        cd->mp_chunk->bindVBOdata();
+//    }
+//    if (m_chunkCreated < 25 * 4 * 4) {
+//       m_chunkCreated += m_chunksThatHaveVBOs.size();
+//    }
+//    m_chunksThatHaveVBOs.clear();
     m_chunksThatHaveVBOsLock.unlock();
 
 }
 
-void Terrain::spawnVBOWorkers(std::unordered_set<Chunk*> &chunksNeedingVBOs) {
-    for (Chunk* c: chunksNeedingVBOs) {
-        spawnVBOWorker(c);
+void Terrain::spawnVBOWorkers(std::unordered_set<Chunk*> &chunksNeedingVBOs, int n) {
+    // each call, we only spwan n workers to process n chunks
+    while (n-- && chunksNeedingVBOs.size() > 0){
+       // pop the first element
+       Chunk* c = *chunksNeedingVBOs.begin();
+       chunksNeedingVBOs.erase(chunksNeedingVBOs.begin());
+       spawnVBOWorker(c);
     }
 }
 
 void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
-    VBOWorker* worker = new VBOWorker(chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock, this);
+    VBOWorker* worker = new VBOWorker(
+        chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock, this
+    );
     QThreadPool::globalInstance()->start(worker);
+}
+
+void Terrain::spawnBlockTypeWorkers(int n){
+    // call n block type worker each time
+    while (n-- && block_to_generate_id.size() > 0){
+       int64_t id = *block_to_generate_id.begin();
+       block_to_generate_id.erase(block_to_generate_id.begin());
+       spawnBlockTypeWorker(id);
+    }
+}
+
+void Terrain::bind_terrain_vbo_data(int n){
+    while (n-- && m_chunksThatHaveVBOs.size() > 0){
+       ChunkOpaqueTransparentVBOData* cd = *m_chunksThatHaveVBOs.begin();
+       m_chunksThatHaveVBOs.erase(m_chunksThatHaveVBOs.begin());
+       cd->mp_chunk->bindVBOdata();
+
+       if (m_chunkCreated < 25 * 4 * 4) {
+            m_chunkCreated += 1;
+       }
+    }
 }
 
 void Terrain::spawnBlockTypeWorker(int64_t zone) {
@@ -318,7 +339,10 @@ void Terrain::spawnBlockTypeWorker(int64_t zone) {
         }
     }
 
-    BlockGenerateWorker* worker = new BlockGenerateWorker(coord.x, coord.y, chunksToFill, &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock, this);
+    BlockGenerateWorker* worker = new BlockGenerateWorker(
+        coord.x, coord.y, chunksToFill,
+        &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock, this
+    );
     QThreadPool::globalInstance()->start(worker);
     /*
     if (QThreadPool::globalInstance()->waitForDone() == false)

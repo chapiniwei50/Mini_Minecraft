@@ -25,7 +25,7 @@ void BlockGenerateWorker::run() {
     }
 }
 
-VBOWorker::VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData>* dat, QMutex * datLock, Terrain* m) :
+VBOWorker::VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData*>* dat, QMutex * datLock, Terrain* m) :
     mp_chunk(c), mp_chunkVBOsCompleted(dat), mp_chunkVBOsCompletedLock(datLock), m_terrain(m)
 {}
 
@@ -34,7 +34,7 @@ void VBOWorker::run() {
         //std::cout << "VBO, Thread " << QThread::currentThreadId() << " start." << std::endl;
         mp_chunk->createVBOdata();
         mp_chunkVBOsCompletedLock->lock();
-        mp_chunkVBOsCompleted->push_back(mp_chunk->vboData);
+        mp_chunkVBOsCompleted->push_back(&mp_chunk->vboData);
         mp_chunkVBOsCompletedLock->unlock();
         //std::cout << "VBO, Thread " << QThread::currentThreadId() << " end." << std::endl;
     }

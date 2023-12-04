@@ -218,7 +218,7 @@ void MyGL::renderTerrain() {
     int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
     int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
 
-    int drawBlockSize = m_terrain.zoneRadius * 32;
+    int drawBlockSize = (m_terrain.zoneRadius - 1) * 64;
     // draw opaque
     m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, true);
     // draw transparent
