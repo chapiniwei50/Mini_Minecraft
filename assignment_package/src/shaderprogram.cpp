@@ -80,6 +80,7 @@ void ShaderProgram::create(const char *vertfile, const char *fragfile)
     unifSampler2D  = context->glGetUniformLocation(prog, "u_Texture");
     unifSamplerFrameBuffer = context->glGetUniformLocation(prog, "u_RenderedTexture");
     unifTime = context->glGetUniformLocation(prog, "u_Time");
+    unifCameraPos = context->glGetUniformLocation(prog, "u_CameraPos");
 
     context->printGLErrorLog();
 }
@@ -88,6 +89,16 @@ void ShaderProgram::useMe()
 {
     context->glUseProgram(prog);
 }
+
+void ShaderProgram::setCameraPosition(const glm::vec3 &camPos)
+{
+    useMe();
+
+    if (unifCameraPos != -1) {
+        context->glUniform3fv(unifCameraPos, 1, &camPos[0]);
+    }
+}
+
 
 void ShaderProgram::setTime(int t)
 {
@@ -348,3 +359,4 @@ void ShaderProgram::drawEffect(Drawable &d){
     if (attrUVFrameBuffer != -1) context->glDisableVertexAttribArray(attrUVFrameBuffer);
     context->printGLErrorLog();
 }
+

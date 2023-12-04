@@ -12,6 +12,23 @@ void FrameBuffer::resize(unsigned int width, unsigned int height, unsigned int d
     m_width = width;
     m_height = height;
     m_devicePixelRatio = devicePixelRatio;
+
+    // Bind FBO and delete old depth texture
+    mp_context->glBindFramebuffer(GL_FRAMEBUFFER, m_frameBuffer);
+    mp_context->glDeleteTextures(1, &m_depthTexture);
+
+    // Generate new depth texture
+    GLuint depthTex;
+    mp_context->glGenTextures(1, &depthTex);
+    mp_context->glBindTexture(GL_TEXTURE_2D, depthTex);
+    mp_context->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    mp_context->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    mp_context->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    mp_context->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    mp_context->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    mp_context->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
+    m_depthTexture = depthTex;
+    mp_context->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void FrameBuffer::create() {
@@ -47,6 +64,18 @@ void FrameBuffer::create() {
     GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
     mp_context->glDrawBuffers(1, drawBuffers); // "1" is the size of drawBuffers
 
+    // Generate texture
+    GLuint depthTex;
+    glGenTextures(1, &depthTex);
+    glBindTexture(GL_TEXTURE_2D, depthTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    mp_context->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
+    m_depthTexture = depthTex;
+
     m_created = true;
     if(mp_context->glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
@@ -54,6 +83,7 @@ void FrameBuffer::create() {
         std::cout << "Frame buffer did not initialize correctly..." << std::endl;
         mp_context->printGLErrorLog();
     }
+
 }
 
 void FrameBuffer::destroy() {
@@ -62,6 +92,7 @@ void FrameBuffer::destroy() {
         mp_context->glDeleteFramebuffers(1, &m_frameBuffer);
         mp_context->glDeleteTextures(1, &m_outputTexture);
         mp_context->glDeleteRenderbuffers(1, &m_depthRenderBuffer);
+        mp_context->glDeleteTextures(1, &m_depthTexture);
     }
 }
 
@@ -72,7 +103,13 @@ void FrameBuffer::bindFrameBuffer() {
 void FrameBuffer::bindToTextureSlot(unsigned int slot) {
     m_textureSlot = slot;
     mp_context->glActiveTexture(GL_TEXTURE0 + slot);
-    mp_context->glBindTexture(GL_TEXTURE_2D, m_outputTexture);
+    if (slot == 0) {
+        mp_context->glBindTexture(GL_TEXTURE_2D, m_outputTexture);
+    } else if (slot == 1) {
+        mp_context->glBindTexture(GL_TEXTURE_2D, m_depthTexture);
+    } else {
+        std::cerr << "Invalid texture slot: " << slot << std::endl;
+    }
 }
 
 unsigned int FrameBuffer::getTextureSlot() const {

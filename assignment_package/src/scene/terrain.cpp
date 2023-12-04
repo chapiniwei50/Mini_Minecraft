@@ -197,10 +197,46 @@ std::unordered_set<int64_t> Terrain::borderingZone(glm::ivec2 zone, int radius) 
     return result;
 }
 
+void Terrain::initialTerrainGeneration(glm::vec3 currentPlayerPos){
+    glm::ivec2 currentZone(64.f * glm::floor(currentPlayerPos.x / 64.f), 64.f * glm::floor(currentPlayerPos.z / 64.f));
+    std::unordered_set<int64_t> currentNearZones = borderingZone(currentZone, zoneRadius);
+
+    for (auto id : currentNearZones) {
+        //This zone id will alaways be ungenerated, but this is a check for safty's sake
+        //If get called multiple times, will not be generating blocks over and over.
+        if (m_generatedTerrain.count(id) == 0) {
+            spawnBlockTypeWorker(id);
+        }
+
+        //There is no previously generated block, obviously
+    }
+    QThreadPool::globalInstance()->waitForDone();
+
+    //No need to destroy VBO data.
+
+    //Generate VBO for newly generated chunks
+    m_chunksThatHaveBlockDataLock.lock();
+    spawnVBOWorkers(m_chunksThatHaveBlockData);
+    m_chunksThatHaveBlockData.clear();
+    m_chunksThatHaveBlockDataLock.unlock();
+    QThreadPool::globalInstance()->waitForDone();
+
+    // Binding VBO data
+    m_chunksThatHaveVBOsLock.lock();
+    for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
+        cd.mp_chunk->bindVBOdata();
+    }
+    if (m_chunkCreated < 25 * 4 * 4) {
+        m_chunkCreated += m_chunksThatHaveVBOs.size();
+    }
+    m_chunksThatHaveVBOs.clear();
+    m_chunksThatHaveVBOsLock.unlock();
+
+}
+
 void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos)
 {
 
-    const int zoneRadius = 2;
     glm::ivec2 currentZone(64.f * glm::floor(currentPlayerPos.x / 64.f), 64.f * glm::floor(currentPlayerPos.z / 64.f));
     glm::ivec2 previousZone(64.f * glm::floor(previousPlayerPos.x / 64.f), 64.f * glm::floor(previousPlayerPos.z / 64.f));
 
@@ -226,10 +262,7 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
                     spawnVBOWorker(chunk.get());
                 }
             }
-            // wait for all vbo works to finish
-            QThreadPool::globalInstance()->waitForDone();
         }
-
     }
 
     for (auto id : previousNearZones) {
@@ -244,10 +277,12 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
         }
     }
 
+    //Generate VBO for newly generated terrain
     m_chunksThatHaveBlockDataLock.lock();
     spawnVBOWorkers(m_chunksThatHaveBlockData);
     m_chunksThatHaveBlockData.clear();
     m_chunksThatHaveBlockDataLock.unlock();
+    QThreadPool::globalInstance()->waitForDone();
 
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
@@ -282,13 +317,15 @@ void Terrain::spawnBlockTypeWorker(int64_t zone) {
             chunksToFill.push_back(c);
         }
     }
-    // TODO: here should for each chunk, start a thread. and then wait for done
+
     BlockGenerateWorker* worker = new BlockGenerateWorker(coord.x, coord.y, chunksToFill, &m_chunksThatHaveBlockData, &m_chunksThatHaveBlockDataLock, this);
     QThreadPool::globalInstance()->start(worker);
+    /*
     if (QThreadPool::globalInstance()->waitForDone() == false)
     {
         throw std::out_of_range("Waiting threads finish failed!");
     }
+    */
     m_generatedTerrain.insert(zone);
 }
 

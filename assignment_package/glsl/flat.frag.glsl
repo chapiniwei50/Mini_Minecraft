@@ -3,38 +3,71 @@
 
 // Refer to the lambert shader files for useful comments
 uniform sampler2D u_Texture;
+uniform sampler2D u_DepthTexture;
 uniform int u_Time;
+uniform vec3 u_CameraPos;
+uniform mat4 u_Model;
+uniform mat4 u_ViewProj;
+uniform mat4 u_ModelInvTr;
 
 in vec3 fs_UV;
 in vec4 fs_Nor;
 in vec4 fs_LightVec;
+in vec3 fs_Pos;
 
 out vec4 out_Col;
+
+const float u_FogDensity = 0.04;
+const vec3 u_FogColor = vec3(0.37f, 0.74f, 1.0f);
+const float u_FogStart = 110.0;
+const float u_FogEnd = 140.0;
 
 void main()
 {
     vec4 diffuseColor;
 
-    if (fs_UV.z > 0.5)  // block that need animate
+    if (abs(fs_UV.z - 1.0) < 0.001)  // WATER
+    {
+        vec3 viewDir = normalize(fs_Pos - u_CameraPos);
+        vec3 reflectedDir = reflect(viewDir, normalize(fs_Nor.xyz));
+
+        vec3 sunDirection = vec3(fs_LightVec);
+        float angle = dot(reflectedDir, sunDirection);
+        angle = acos(clamp(angle, -1.0, 1.0));
+
+        const float thresholdMin = radians(1.0);
+        const float thresholdMax = radians(5.0);
+        float blendFactor = smoothstep(thresholdMax, thresholdMin, angle);
+
+        vec4 sunColor = vec4(1.0, 1.0, 1.0, 1.0);
+        float time_offset = (u_Time % 500) / 500.0;
+        vec4 textureColor = texture(u_Texture, fs_UV.xy + vec2(1.0/16.0, 1.0/16.0) * time_offset);
+
+        diffuseColor = mix(textureColor, sunColor, blendFactor);
+    }
+    else if (abs(fs_UV.z - 0.5) < 0.001)  // LAVA
     {
         float time_offset = (u_Time % 500) / 500.0;
         diffuseColor = texture(u_Texture, fs_UV.xy + vec2(1.0/16.0, 1.0/16.0) * time_offset);
     }
-    else
+    else{
         diffuseColor = texture(u_Texture, fs_UV.xy);
+    }
 
     // Calculate the diffuse term for Lambert shading
     float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
     // Avoid negative lighting values
     diffuseTerm = clamp(diffuseTerm, 0, 1);
-
     float ambientTerm = 0.5;
-
     float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
                                                         //to simulate ambient lighting. This ensures that faces that are not
                                                         //lit by our point light are not completely black.
     lightIntensity = clamp(lightIntensity, 0, 1);
 
-    // Compute final shaded color
     out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
+
+    float depth = length(fs_Pos - u_CameraPos);
+    float fogFactor = clamp((u_FogEnd - depth) / (u_FogEnd - u_FogStart), 0.0, 1.0);
+    vec3 finalColor = mix(u_FogColor, diffuseColor.rgb * lightIntensity, fogFactor);
+    out_Col = vec4(finalColor, diffuseColor.a);
 }

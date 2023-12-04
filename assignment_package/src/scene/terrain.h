@@ -68,6 +68,8 @@ private:
     // the texture that applies to all chunks
     uPtr<Texture> mp_texture;
 
+
+
 public:
     Terrain(OpenGLContext *context);
     ~Terrain();
@@ -116,6 +118,7 @@ public:
     void spawnVBOWorker(Chunk* c);
     void spawnVBOWorkers(std::unordered_set<Chunk *> &chunksNeedingVBOs);
     void spawnBlockTypeWorker(int64_t zone);
+    void initialTerrainGeneration(glm::vec3 currentPlayerPos);
 
     float PerlinNoise2D(float x, float z, float frequency, int octaves);
     float PerlinNoise3D(glm::vec3 p);
@@ -126,5 +129,8 @@ public:
 
     // init texture file
     void create_load_texture(const char *textureFile);
+
+    // Visible distance
+    const int zoneRadius = 4;
 
 };

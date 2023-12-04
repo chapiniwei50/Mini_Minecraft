@@ -31,6 +31,7 @@ public:
     int unifSampler2D; // A handle to the "uniform" sampler2D that will be used to read the texture containing the scene render
     int unifSamplerFrameBuffer;
     int unifTime; // A handle for the "uniform" float representing time in the shader
+    int unifCameraPos; // A handle for the "uniform" vec3 representing the camera position in the shader
 
 public:
     ShaderProgram(OpenGLContext* context);
@@ -60,9 +61,11 @@ public:
     void drawInterleaved(Drawable *d, bool opaque, int textureSlot = 0);
     void drawEffect(Drawable &d);
 
+
     QString qTextFileRead(const char*);
 
     void setTime(int t);
+    void setCameraPosition(const glm::vec3 &camPos);
 
 private:
     OpenGLContext* context;   // Since Qt's OpenGL support is done through classes like QOpenGLFunctions_3_2_Core,

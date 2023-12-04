@@ -58,23 +58,20 @@ void Player::processInputs(InputBundle &inputs) {
         return;
     }
 
+}
 
-#ifdef Q_OS_WIN
+void Player::processCameraRotation(float thetaChange, float phiChange){
     auto clamp = [](float value, float minVal, float maxVal) -> float {
         return std::max(minVal, std::min(value, maxVal));
     };
 
     glm::vec2 cameraOrientationOrigin = m_cameraOrientation;
-    float thetaChange = 0.2 * inputs.mouseX;
     m_cameraOrientation.x = std::fmod(m_cameraOrientation.x + thetaChange, 360);
-    float phiChange = 0.2 * inputs.mouseY;
     m_cameraOrientation.y = clamp(m_cameraOrientation.y + phiChange, -89.9999, 89.9999);
     phiChange = m_cameraOrientation.y - cameraOrientationOrigin.y;
 
     rotateOnUpGlobal(thetaChange);
     rotateOnRightLocal(phiChange);
-#endif
-
 }
 bool Player::isBlockAt( glm::vec3& position, const Terrain& terrain) {
     return terrain.getBlockAt(position) != EMPTY;
@@ -147,6 +144,10 @@ void Player::computePhysics(float dT, const Terrain &terrain, InputBundle &input
 
     // TODO: Update the Player's position based on its
     // and velocity, and also perform collision detection.
+
+    ///Clamp the value of dT, if the time interval between frames was too big,
+    ///then dT will not work correctly.
+    if(dT>1.0) dT = 0.1f;
 
     const float friction = 0.9f;
     const glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
@@ -326,8 +327,6 @@ void Player::removeBlock() {
         }
     }
 }
-
-
 
 void Player::setCameraWidthHeight(unsigned int w, unsigned int h) {
     m_camera.setWidthHeight(w, h);
