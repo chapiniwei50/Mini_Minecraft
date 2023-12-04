@@ -377,7 +377,8 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
                 if (biome == BiomeType::PLAIN) {
                     setBlockAt(x, y, z, GRASS);
                 } else if (biome == BiomeType::MOUNTAIN) {
-                    setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
+                    //setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
+                    setBlockAt(x, y, z, DIRT);
                 } else if (biome == BiomeType::DESSERT){
                     setBlockAt(x, y, z, STONE);
                 }
@@ -439,8 +440,10 @@ void Chunk::refreshAdjacentChunkVBOData(){
 }
 
 void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
+    x += 32768;
+    z += 32768;
     // Noise settings for biome determination and height variation.
-    const float biomeScale = 0.05f; // Larger scale for biome determination.
+    const float biomeScale = 0.015f; // Larger scale for biome determination.
     const float terrainScale = 0.01f; // Terrain variation scale.
     const int baseHeight = 135;      // Base height for the terrain.
 
