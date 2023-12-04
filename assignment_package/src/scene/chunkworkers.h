@@ -26,12 +26,11 @@ public:
 class VBOWorker : public QRunnable {
 private:
     Chunk* mp_chunk;
-    std::vector<ChunkOpaqueTransparentVBOData>* mp_chunkVBOsCompleted;
+    std::vector<ChunkOpaqueTransparentVBOData*>* mp_chunkVBOsCompleted;
     QMutex *mp_chunkVBOsCompletedLock;
     Terrain* m_terrain;
-
 public:
-    VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData>* dat, QMutex * datLock, Terrain* m) ;
+    VBOWorker(Chunk* c, std::vector<ChunkOpaqueTransparentVBOData*>* dat, QMutex * datLock, Terrain* m) ;
     void run() override;
 };
 
