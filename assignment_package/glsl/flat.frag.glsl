@@ -19,8 +19,8 @@ out vec4 out_Col;
 
 const float u_FogDensity = 0.04;
 const vec3 u_FogColor = vec3(0.37f, 0.74f, 1.0f);
-const float u_FogStart = 110.0;
-const float u_FogEnd = 140.0;
+const float u_FogStart = 190.0;
+const float u_FogEnd = 210.0;
 
 void main()
 {
@@ -64,10 +64,13 @@ void main()
                                                         //lit by our point light are not completely black.
     lightIntensity = clamp(lightIntensity, 0, 1);
 
-    out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
+    //out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
 
     float depth = length(fs_Pos - u_CameraPos);
     float fogFactor = clamp((u_FogEnd - depth) / (u_FogEnd - u_FogStart), 0.0, 1.0);
     vec3 finalColor = mix(u_FogColor, diffuseColor.rgb * lightIntensity, fogFactor);
+
+
+
     out_Col = vec4(finalColor, diffuseColor.a);
 }
