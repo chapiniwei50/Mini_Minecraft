@@ -215,7 +215,7 @@ void Terrain::initialTerrainGeneration(glm::vec3 currentPlayerPos){
 
     //Generate VBO for newly generated chunks
     m_chunksThatHaveBlockDataLock.lock();
-    spawnVBOWorkers(m_chunksThatHaveBlockData, m_chunksThatHaveBlockData.size());
+    spawnVBOWorkers(m_chunksThatHaveBlockData.size());
     //m_chunksThatHaveBlockData.clear();
     m_chunksThatHaveBlockDataLock.unlock();
     QThreadPool::globalInstance()->waitForDone();
@@ -272,14 +272,14 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
     //Generate VBO for newly generated terrain
     m_chunksThatHaveBlockDataLock.lock();
     fprintf(stderr, "%d\t", m_chunksThatHaveBlockData.size());
-    spawnVBOWorkers(m_chunksThatHaveBlockData, 4);
+    spawnVBOWorkers(8);
     m_chunksThatHaveBlockDataLock.unlock();
     //QThreadPool::globalInstance()->waitForDone();
 
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
     fprintf(stderr, "%d\n", m_chunksThatHaveVBOs.size());
-    bind_terrain_vbo_data(4);
+    bind_terrain_vbo_data(8);
 //    for (ChunkOpaqueTransparentVBOData* cd : m_chunksThatHaveVBOs) {
 //        cd->mp_chunk->bindVBOdata();
 //    }
@@ -291,12 +291,16 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
 
 }
 
-void Terrain::spawnVBOWorkers(std::unordered_set<Chunk*> &chunksNeedingVBOs, int n) {
+void Terrain::spawnVBOWorkers(int n) {
     // each call, we only spwan n workers to process n chunks
-    while (n-- && chunksNeedingVBOs.size() > 0){
+    while (n-- && m_chunksThatHaveBlockData.size() > 0){
        // pop the first element
-       Chunk* c = *chunksNeedingVBOs.begin();
-       chunksNeedingVBOs.erase(chunksNeedingVBOs.begin());
+       Chunk* c = *m_chunksThatHaveBlockData.begin();
+       m_chunksThatHaveBlockData.erase(m_chunksThatHaveBlockData.begin());
+       if (c->m_blocks[0] != STONE){
+            printf("here");
+            continue;
+       }
        spawnVBOWorker(c);
     }
 }
@@ -321,6 +325,9 @@ void Terrain::bind_terrain_vbo_data(int n){
     while (n-- && m_chunksThatHaveVBOs.size() > 0){
        ChunkOpaqueTransparentVBOData* cd = *m_chunksThatHaveVBOs.begin();
        m_chunksThatHaveVBOs.erase(m_chunksThatHaveVBOs.begin());
+       if (cd->m_vboDataOpaque.size() + cd->m_vboDataTransparent.size() == 0)
+            printf("here");
+
        cd->mp_chunk->bindVBOdata();
 
        if (m_chunkCreated < 25 * 4 * 4) {
