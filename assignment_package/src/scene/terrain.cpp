@@ -223,8 +223,8 @@ void Terrain::initialTerrainGeneration(glm::vec3 currentPlayerPos){
 
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
-    for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
-        cd.mp_chunk->bindVBOdata();
+    for (ChunkOpaqueTransparentVBOData* cd : m_chunksThatHaveVBOs) {
+        cd->mp_chunk->bindVBOdata();
     }
     if (m_chunkCreated < 25 * 4 * 4) {
         m_chunkCreated += m_chunksThatHaveVBOs.size();
@@ -286,8 +286,8 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
 
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
-    for (ChunkOpaqueTransparentVBOData &cd : m_chunksThatHaveVBOs) {
-        cd.mp_chunk->bindVBOdata();
+    for (ChunkOpaqueTransparentVBOData* cd : m_chunksThatHaveVBOs) {
+        cd->mp_chunk->bindVBOdata();
     }
     if (m_chunkCreated < 25 * 4 * 4) {
        m_chunkCreated += m_chunksThatHaveVBOs.size();
@@ -304,7 +304,9 @@ void Terrain::spawnVBOWorkers(std::unordered_set<Chunk*> &chunksNeedingVBOs) {
 }
 
 void Terrain::spawnVBOWorker(Chunk* chunkNeedingVBOData) {
-    VBOWorker* worker = new VBOWorker(chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock, this);
+    VBOWorker* worker = new VBOWorker(
+        chunkNeedingVBOData, &m_chunksThatHaveVBOs, &m_chunksThatHaveVBOsLock, this
+    );
     QThreadPool::globalInstance()->start(worker);
 }
 

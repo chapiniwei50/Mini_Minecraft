@@ -60,7 +60,7 @@ private:
 
     std::unordered_set<Chunk*> m_chunksThatHaveBlockData;
     QMutex m_chunksThatHaveBlockDataLock;
-    std::vector<ChunkOpaqueTransparentVBOData> m_chunksThatHaveVBOs;
+    std::vector<ChunkOpaqueTransparentVBOData*> m_chunksThatHaveVBOs;
     QMutex m_chunksThatHaveVBOsLock;
     int m_chunkCreated;
     //mutable QMutex m_chunksMutex;
