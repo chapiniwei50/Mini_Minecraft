@@ -266,8 +266,11 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
     }
 
     // Generate n = 1 Block Data each tick
-    spawnBlockTypeWorkers(1);
-    fprintf(stderr, "%d\t", block_to_generate_id.size());
+    spawnBlockTypeWorkers(2);
+    if(block_to_generate_id.size() != 0){
+        fprintf(stderr, "%d\t", block_to_generate_id.size());
+    }
+    QThreadPool::globalInstance()->waitForDone();
 
     //Generate VBO for newly generated terrain
     m_chunksThatHaveBlockDataLock.lock();
@@ -415,11 +418,11 @@ void Terrain::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
         if (y == height) {
             // Top block determination
             if (biome == BiomeType::PLAIN) {
-                setBlockAt(x, y, z, GRASS);
-            } else if (biome == BiomeType::MOUNTAIN) {
-                setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
-            } else if (biome == BiomeType::DESSERT){
                 setBlockAt(x, y, z, STONE);
+            } else if (biome == BiomeType::MOUNTAIN) {
+                setBlockAt(x, y, z, STONE);
+            } else if (biome == BiomeType::DESSERT){
+                setBlockAt(x, y, z, DIRT);
             }
         } else {
             // Filling other blocks
@@ -465,18 +468,18 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
     const float terrainScale = 0.01f; // Terrain variation scale.
     const int baseHeight = 135;      // Base height for the terrain.
 
-    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.05 + 0.5;
+    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.005 + 0.5;
 
     float height = baseHeight;
 
     // Determine the biome based on the biomeNoiseValue
-    if (biomeNoiseValue <= 0.5) { // Plains
+    if (biomeNoiseValue <= 0.35) { // Plains
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
         b = BiomeType::PLAIN;
-    } else if (biomeNoiseValue >= 0.6 && biomeNoiseValue <= 0.8) { // Desert
+    } else if (biomeNoiseValue >= 0.4 && biomeNoiseValue <= 0.75) { // Desert
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 40 + 5;
         b = BiomeType::DESSERT;
-    } else if (biomeNoiseValue > 0.8) { // Mountains
+    } else if (biomeNoiseValue > 0.75) { // Mountains
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
         b = BiomeType::MOUNTAIN;
     } else { // Transition between Plains and Desert

@@ -172,6 +172,7 @@ void MyGL::paintGL() {
     renderTerrain();
     renderOverlay();
 
+
 }
 
 void MyGL::renderDepthView(){

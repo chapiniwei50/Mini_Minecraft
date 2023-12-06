@@ -372,26 +372,41 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
     // Based on biome, fill above y = 128
     for (int y = 129; y <= height; ++y) {
         try {
-            if (y == height) {
-                // Top block determination
-                if (biome == BiomeType::PLAIN) {
+            switch (biome) {
+            case BiomeType::PLAIN:
+                if (y == height) {
                     setBlockAt(x, y, z, GRASS);
-                } else if (biome == BiomeType::MOUNTAIN) {
-                    //setBlockAt(x, y, z, (y > 200) ? GRASS : STONE);
-                    setBlockAt(x, y, z, DIRT);
-                } else if (biome == BiomeType::DESSERT){
-                    setBlockAt(x, y, z, STONE);
-                }
-            } else {
-                // Filling other blocks
-                if (biome == BiomeType::PLAIN) {
-                    setBlockAt(x, y, z, DIRT);
-                } else if (biome == BiomeType::MOUNTAIN) {
-                    setBlockAt(x, y, z, STONE);
-                } else if (biome == BiomeType::DESSERT){
+                } else {
                     setBlockAt(x, y, z, DIRT);
                 }
+                break;
+
+            case BiomeType::MOUNTAIN:
+                if (y == height) {
+                    setBlockAt(x, y, z, DIRT);
+                } else {
+                    setBlockAt(x, y, z, STONE);
+                }
+                break;
+
+            case BiomeType::DESSERT:
+                if (y == height) {
+                    setBlockAt(x, y, z, STONE);
+                } else {
+                    setBlockAt(x, y, z, DIRT);
+                }
+                break;
+
+            case BiomeType::RIVER:
+                setBlockAt(x, y, z, WATER);
+                break;
+
+            default:
+                // Handle unknown biomes
+                setBlockAt(x, y, z, WATER);
+                break;
             }
+
         } catch(std::exception &e) {
             std::cout << "Exception in fillTerrainBlocks y = [129, ?] loop, height = " << height << ", xz = " << x << "," << z << std::endl;
         }
@@ -443,31 +458,52 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
     x += 32768;
     z += 32768;
     // Noise settings for biome determination and height variation.
-    const float biomeScale = 0.015f; // Larger scale for biome determination.
+    const float biomeScale = 0.005f; // Larger scale for biome determination.
     const float terrainScale = 0.01f; // Terrain variation scale.
-    const int baseHeight = 135;      // Base height for the terrain.
+    const int baseHeight = 145;      // Base height for the terrain.
+    const float plainStart = 0;
+    const float plainEnd = 0.3;
+    const float desertStart = 0.4;
+    const float desertEnd = 0.7;
+    const float mountainStart = 0.8;
+    const float mountainEnd = 1.0;
 
-    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 0.5 + 0.5;
+    float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 2 + 0.5;
 
     float height = baseHeight;
 
     // Determine the biome based on the biomeNoiseValue
-    if (biomeNoiseValue <= 0.5) { // Plains
+    if (biomeNoiseValue >= plainStart && biomeNoiseValue <= plainEnd) { // Plains
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
         b = BiomeType::PLAIN;
-    } else if (biomeNoiseValue >= 0.6 && biomeNoiseValue <= 0.8) { // Desert
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
-        b = BiomeType::DESSERT;
-    } else if (biomeNoiseValue > 0.8) { // Mountains
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
-        b = BiomeType::MOUNTAIN;
-    } else { // Transition between Plains and Desert
+    }
+    else if (biomeNoiseValue >= plainEnd && biomeNoiseValue <= desertStart) { // Transition between Plains and Desert
         float plainsHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
         float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
-        float smoothStepInput = (biomeNoiseValue - 0.4f) / 0.3f;
-        float smoothStepResult = glm::smoothstep(0.25f, 0.75f, smoothStepInput);
+        float smoothStepInput = (biomeNoiseValue - plainEnd) / (desertStart - plainEnd);
+        float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
         height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
         b = smoothStepResult < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
+    }
+    else if (biomeNoiseValue >= desertStart && biomeNoiseValue <= desertEnd) { // Desert
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        b = BiomeType::DESSERT;
+    }
+    else if (biomeNoiseValue >= desertEnd && biomeNoiseValue <= mountainStart) { // River
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        float mountainHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
+        float smoothStepInput = (biomeNoiseValue - desertEnd) / (desertEnd - mountainStart);
+        float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
+        height += mountainHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
+        b = BiomeType::RIVER;
+    }
+    else if (biomeNoiseValue >= mountainStart && biomeNoiseValue <= mountainEnd) { // Mountains
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
+        b = BiomeType::MOUNTAIN;
+    }
+    else{
+        height -= 50;
+        b = BiomeType::LAVA;
     }
     y = static_cast<int>(round(height));
     y = std::min(255, std::max(0, y));
