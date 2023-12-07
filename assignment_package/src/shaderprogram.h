@@ -26,6 +26,7 @@ public:
     int unifModelInvTr; // A handle for the "uniform" mat4 representing inverse transpose of the model matrix in the vertex shader
     int unifViewProj; // A handle for the "uniform" mat4 representing combined projection and view matrices in the vertex shader
     int unifColor; // A handle for the "uniform" vec4 representing color of geometry in the vertex shader
+    int unifLightSpaceMatrix;
 
     int unifEffectType;
     int unifSampler2D; // A handle to the "uniform" sampler2D that will be used to read the texture containing the scene render
@@ -43,6 +44,7 @@ public:
     void setModelMatrix(const glm::mat4 &model);
     // Pass the given Projection * View matrix to this shader on the GPU
     void setViewProjMatrix(const glm::mat4 &vp);
+    void setLightSpaceMatrix(const glm::mat4 &m);
     // Pass the given color to this shader on the GPU
     void setGeometryColor(glm::vec4 color);
     void seteffectType(const int type);

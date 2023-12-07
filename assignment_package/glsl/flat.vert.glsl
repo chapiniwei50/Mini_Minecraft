@@ -6,6 +6,7 @@
 uniform mat4 u_Model;
 uniform mat4 u_ViewProj;
 uniform mat4 u_ModelInvTr;
+uniform mat4 u_LightSpaceMatrix;
 
 in vec4 vs_Pos;
 in vec4 vs_Nor;
@@ -15,6 +16,7 @@ out vec3 fs_UV;
 out vec4 fs_Nor;
 out vec4 fs_LightVec;
 out vec3 fs_Pos;
+out vec4 fs_PosLightSpace;
 
 const vec4 lightDir = normalize(vec4(0.5, 1, 0.75, 0));
 
@@ -32,6 +34,8 @@ void main()
 
     vec4 worldPos = u_Model * vs_Pos;
     fs_Pos = worldPos.xyz;
+
+    fs_PosLightSpace = u_LightSpaceMatrix * modelposition;
 
     //built-in things to pass down the pipeline
     gl_Position = u_ViewProj * modelposition;

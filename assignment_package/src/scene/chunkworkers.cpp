@@ -10,18 +10,31 @@ BlockGenerateWorker::BlockGenerateWorker(int x, int z, std::vector<Chunk*> chunk
 void BlockGenerateWorker::run() {
     try{
         //std::cout << "Block Type, Thread " << QThread::currentThreadId() << " start." << std::endl;
-        for (auto &chunk : m_chunksToFill) {
-            mp_chunksCompletedLock->lock();
-            mp_chunksCompletedLock->unlock();
+        for (Chunk* chunk : m_chunksToFill) {
+//            mp_chunksCompletedLock->lock();
+//            mp_chunksCompletedLock->unlock();
             chunk->createChunkBlockData();
-            mp_chunksCompletedLock->lock();
-            mp_chunksCompleted->insert(chunk);
-            mp_chunksCompletedLock->unlock();
+//            mp_chunksCompletedLock->lock();
+//            mp_chunksCompleted->insert(chunk);
+//            mp_chunksCompletedLock->unlock();
         }
         //std::cout << "Block Type, Thread " << QThread::currentThreadId() << " end." << std::endl;
     }
     catch(const std::exception& e){
         std::cout << "Exception in block generation:" << e.what() << std::endl;
+    }
+
+    try{
+        mp_chunksCompletedLock->lock();
+        for (Chunk* chunk : m_chunksToFill) {
+            if (chunk->m_blocks[0] != STONE)
+                printf("here");
+            mp_chunksCompleted->insert(chunk);
+        }
+        mp_chunksCompletedLock->unlock();
+    }
+    catch(const std::exception& e){
+        std::cout << "Exception in block generation mp_chunksCompleted insert" << e.what() << std::endl;
     }
 }
 
