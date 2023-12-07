@@ -26,7 +26,8 @@ public:
     int unifModelInvTr; // A handle for the "uniform" mat4 representing inverse transpose of the model matrix in the vertex shader
     int unifViewProj; // A handle for the "uniform" mat4 representing combined projection and view matrices in the vertex shader
     int unifColor; // A handle for the "uniform" vec4 representing color of geometry in the vertex shader
-    int unifLightSpaceMatrix;
+    int unifLightSpaceMatrix;  // for spacial transformation in light space
+    int unifLightDirection;  // for vec3 light direction
 
     int unifEffectType;
     int unifSampler2D; // A handle to the "uniform" sampler2D that will be used to read the texture containing the scene render
@@ -68,6 +69,8 @@ public:
 
     void setTime(int t);
     void setCameraPosition(const glm::vec3 &camPos);
+
+    void setLightDirection(const glm::vec3 &lightDirection);
 
 private:
     OpenGLContext* context;   // Since Qt's OpenGL support is done through classes like QOpenGLFunctions_3_2_Core,

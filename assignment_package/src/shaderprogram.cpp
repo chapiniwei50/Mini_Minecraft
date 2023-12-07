@@ -11,7 +11,10 @@
 ShaderProgram::ShaderProgram(OpenGLContext *context)
     : vertShader(), fragShader(), prog(),
     attrPos(-1), attrNor(-1), attrCol(-1), attrUV(-1), attrUVFrameBuffer(-1),
-    unifModel(-1), unifModelInvTr(-1), unifViewProj(-1), unifColor(-1), unifTime(-1), unifEffectType(-1),unifSamplerFrameBuffer(-1),
+    unifModel(-1), unifModelInvTr(-1), unifViewProj(-1), unifColor(-1),
+    unifLightSpaceMatrix(-1), unifLightDirection(-1), unifEffectType(-1),
+    unifSampler2D(-1), unifSamplerFrameBuffer(-1),
+    unifTime(-1), unifCameraPos(-1),
       context(context)
 {}
 
@@ -77,6 +80,7 @@ void ShaderProgram::create(const char *vertfile, const char *fragfile)
     unifColor      = context->glGetUniformLocation(prog, "u_Color");
     unifEffectType = context->glGetUniformLocation(prog, "u_EffectType");
     unifLightSpaceMatrix = context->glGetUniformLocation(prog, "u_LightSpaceMatrix");
+    unifLightDirection = context->glGetUniformLocation(prog, "u_LightDirection");
 
     unifSampler2D  = context->glGetUniformLocation(prog, "u_Texture");
     unifSamplerFrameBuffer = context->glGetUniformLocation(prog, "u_RenderedTexture");
@@ -97,6 +101,15 @@ void ShaderProgram::setCameraPosition(const glm::vec3 &camPos)
 
     if (unifCameraPos != -1) {
         context->glUniform3fv(unifCameraPos, 1, &camPos[0]);
+    }
+}
+
+void ShaderProgram::setLightDirection(const glm::vec3 &lightDirection)
+{
+    useMe();
+
+    if (unifLightDirection != -1) {
+        context->glUniform3fv(unifLightDirection, 1, &lightDirection[0]);
     }
 }
 

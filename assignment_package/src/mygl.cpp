@@ -168,9 +168,9 @@ void MyGL::tick() {
     m_lastTime = currentTime;
     m_player.tick(deltaT, m_inputs);
     m_terrain.multithreadedTerrainUpdate(m_player.mcr_position, m_player.mcr_lastFramePosition);
+    update_light_vector();
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
     sendPlayerDataToGUI(); // Updates the info in the secondary window displaying player data
-    update_light_vector();
 }
 
 void MyGL::sendPlayerDataToGUI() const {
@@ -324,6 +324,7 @@ void MyGL::renderOverlay(){
 void MyGL::update_light_vector() {
     depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
     LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
+    m_progFlat.setLightDirection(lightInvDir);
 }
 
 void MyGL::keyPressEvent(QKeyEvent *e) {

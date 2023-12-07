@@ -10,10 +10,10 @@ uniform vec3 u_CameraPos;
 uniform mat4 u_Model;
 uniform mat4 u_ViewProj;
 uniform mat4 u_ModelInvTr;
+uniform vec3 u_LightDirection;
 
 in vec3 fs_UV;
-in vec4 fs_Nor;
-in vec4 fs_LightVec;
+in vec3 fs_Nor;
 in vec3 fs_Pos;
 in vec4 fs_PosLightSpace;
 
@@ -33,7 +33,9 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     float closestDepth = texture(u_ShadowMappingDepth, projCoords.xy).r;
     float currentDepth = projCoords.z;
 
-    float bias = 0.001;
+    float min_bias = 0.0001;
+    float max_bias = 0.001;
+    float bias = max(min_bias, max_bias * (1 - dot(normalize(fs_Nor), normalize(u_LightDirection))));
     float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
 
     return shadow;
@@ -47,9 +49,9 @@ void main()
     if (abs(fs_UV.z - 1.0) < 0.001)  // WATER
     {
         vec3 viewDir = normalize(fs_Pos - u_CameraPos);
-        vec3 reflectedDir = reflect(viewDir, normalize(fs_Nor.xyz));
+        vec3 reflectedDir = reflect(viewDir, normalize(fs_Nor));
 
-        vec3 sunDirection = vec3(fs_LightVec);
+        vec3 sunDirection = normalize(u_LightDirection);
         float angle = dot(reflectedDir, sunDirection);
         angle = acos(clamp(angle, -1.0, 1.0));
 
@@ -73,7 +75,7 @@ void main()
     }
 
     // Calculate the diffuse term for Lambert shading
-    float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
+    float diffuseTerm = dot(normalize(fs_Nor), normalize(u_LightDirection));
     // Avoid negative lighting values
     diffuseTerm = clamp(diffuseTerm, 0, 1);
     float ambientTerm = 0.5;
