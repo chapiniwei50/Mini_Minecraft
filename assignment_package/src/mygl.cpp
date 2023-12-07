@@ -10,9 +10,9 @@
 
 MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
-    m_progLambert(this), m_progFlat(this),
+    m_progLambert(this), m_progFlat(this), m_depth(this),
     m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch()),m_WLoverlay(this), m_geomQuad(this),
-    m_frameBuffer(this, this->width(), this->height(), this->devicePixelRatio()),m_depth(this),
+    m_frameBuffer(this, this->width(), this->height(), this->devicePixelRatio()),
     m_time(0)
 {
     // Connect the timer to a function so that when the timer ticks the function is executed
@@ -49,6 +49,27 @@ void MyGL::setDepthFBO(){
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void MyGL::set_shadow_mapping(){
+    // create the buffer
+    glGenFramebuffers(1, &shadow_mapping_fbo);
+
+    // create the texture
+    glGenTextures(1, &shadow_mapping_texture);
+    glBindTexture(GL_TEXTURE_2D, shadow_mapping_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                 shad_width, shad_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, shadow_mapping_fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadow_mapping_texture, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void MyGL::initializeGL()
 {
     // Create an OpenGL context using Qt's QOpenGLFunctions_3_2_Core class
@@ -73,6 +94,7 @@ void MyGL::initializeGL()
 
     m_frameBuffer.create();
     setDepthFBO();
+    set_shadow_mapping();
     m_geomQuad.createVBOdata();
 
     m_WLoverlay.create(":/glsl/WLoverlay.vert.glsl", ":/glsl/WLoverlay.frag.glsl");
@@ -148,6 +170,7 @@ void MyGL::tick() {
     m_terrain.multithreadedTerrainUpdate(m_player.mcr_position, m_player.mcr_lastFramePosition);
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
     sendPlayerDataToGUI(); // Updates the info in the secondary window displaying player data
+    update_light_vector();
 }
 
 void MyGL::sendPlayerDataToGUI() const {
@@ -168,10 +191,27 @@ void MyGL::sendPlayerDataToGUI() const {
 void MyGL::paintGL() {
     // Clear the screen so that we only see newly drawn images
 
-    renderDepthView();
+    //renderDepthView();
+    renderShadowMappingDepth();
+//    visualize();
     renderTerrain();
     renderOverlay();
 
+}
+
+
+void MyGL::visualize(){
+    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
+    glViewport(0, 0, this->width(), this->height());
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, shadow_mapping_texture);
+    m_WLoverlay.useMe();
+    GLuint shadMapDepthUnif = glGetUniformLocation(m_WLoverlay.prog, "u_RenderedTexture");
+    glUniform1i(shadMapDepthUnif, 0);
+
+    m_WLoverlay.drawEffect(m_geomQuad);
 }
 
 void MyGL::renderDepthView(){
@@ -202,9 +242,26 @@ void MyGL::renderDepthView(){
     glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
 }
 
+void MyGL::renderShadowMappingDepth() {
+    glViewport(0, 0, shad_width, shad_height);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadow_mapping_fbo);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // render scene
+    m_depth.setModelMatrix(glm::mat4(1.0f));
+    m_depth.setViewProjMatrix(LightSpaceMatrix);
+
+    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
+    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
+    int drawBlockSize = m_terrain.zoneRadius * 32;
+    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_depth, true);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
+}
+
 // TODO: Change this so it renders the nine zones of generated
 // terrain that surround the player (refer to Terrain::m_generatedTerrain
-// for more info)
+// for more info)f
 void MyGL::renderTerrain() {
 
     m_frameBuffer.bindFrameBuffer();
@@ -215,10 +272,18 @@ void MyGL::renderTerrain() {
     glCullFace(GL_BACK);
 
     m_progFlat.useMe();
+
+    m_progFlat.setLightSpaceMatrix(LightSpaceMatrix);
+    // activate shadow mapping depth texture
+    glActiveTexture(GL_TEXTURE0 + 2);
+    glBindTexture(GL_TEXTURE_2D, shadow_mapping_texture);
+    GLuint shadMapDepthUnif = glGetUniformLocation(m_progFlat.prog, "u_ShadowMappingDepth");
+    glUniform1i(shadMapDepthUnif, 2);
+
     int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
     int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
 
-    int drawBlockSize = (m_terrain.zoneRadius - 1) * 64;
+    int drawBlockSize = m_terrain.zoneRadius * 32;
     // draw opaque
     m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, true);
     // draw transparent
@@ -254,6 +319,11 @@ void MyGL::renderOverlay(){
     m_WLoverlay.useMe();
     m_frameBuffer.bindToTextureSlot(0);
     m_WLoverlay.drawEffect(m_geomQuad);
+}
+
+void MyGL::update_light_vector() {
+    depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
+    LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
 }
 
 void MyGL::keyPressEvent(QKeyEvent *e) {

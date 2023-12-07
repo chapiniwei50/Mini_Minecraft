@@ -83,4 +83,6 @@ public:
 
     void refreshChunkVBOData();
     void refreshAdjacentChunkVBOData();
+
+    friend class BlockGenerateWorker;
 };

@@ -35,6 +35,12 @@ private:
 
     GLuint fbo;
 
+    // settings about shadow mapping
+    GLuint shadow_mapping_fbo;
+    int shad_width = 1258; //this->width();
+    int shad_height = 916; //this->height();
+    GLuint shadow_mapping_texture;
+
     Terrain m_terrain; // All of the Chunks that currently comprise the world.
     Player m_player; // The entity controlled by the user. Contains a camera to display what it sees as well.
     InputBundle m_inputs; // A collection of variables to be updated in keyPressEvent, mouseMoveEvent, mousePressEvent, etc.
@@ -55,12 +61,22 @@ private:
     int m_time; // another timer for shader programs cuz I don't know how to use QTimer haha.
 
     void setDepthFBO();
+    void set_shadow_mapping();
 
     // Called from paintGL().
     // Calls Terrain::draw().
     void renderTerrain();
     void renderDepthView();
     void renderOverlay();
+    void renderShadowMappingDepth();
+
+    void visualize();
+
+    glm::vec3 lightInvDir = glm::vec3(50.f, 200.f, 200.f);
+    glm::mat4 depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
+    glm::mat4 depthProjMatrix = glm::ortho<float>(-100.f, 100.f, -100.f, 100.f, 0.1f, 1000.f);
+    glm::mat4 LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
+    void update_light_vector();
 
 public:
     explicit MyGL(QWidget *parent = nullptr);
