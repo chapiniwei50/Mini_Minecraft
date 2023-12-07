@@ -36,7 +36,9 @@ enum class BiomeType : unsigned char{
     NULLBIOME,
     DESSERT,
     PLAIN,
-    MOUNTAIN
+    MOUNTAIN,
+    RIVER,
+    LAVA
 };
 
 

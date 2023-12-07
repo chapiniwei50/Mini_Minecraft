@@ -21,8 +21,8 @@ out vec4 out_Col;
 
 const float u_FogDensity = 0.04;
 const vec3 u_FogColor = vec3(0.37f, 0.74f, 1.0f);
-const float u_FogStart = 110.0;
-const float u_FogEnd = 140.0;
+const float u_FogStart = 190.0;
+const float u_FogEnd = 210.0;
 
 
 float ShadowCalculation(vec4 fragPosLightSpace)
