@@ -76,7 +76,7 @@ private:
     glm::mat4 depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
     glm::mat4 depthProjMatrix = glm::ortho<float>(-150.f, 150.f, -150.f, 150.f, 0.1f, 1000.f);
     glm::mat4 LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
-    glm::vec3 axis = glm::vec3(1.f, 0.f, 1.f);
+    glm::vec3 axis = glm::vec3(1.1f, 0.f, 0.9f);
     glm::mat4 rotMat = glm::rotate(glm::mat4(1.f), glm::radians(0.1f), axis);
     void update_light_vector();
 

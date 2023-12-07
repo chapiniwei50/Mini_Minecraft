@@ -67,22 +67,17 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
     float day_time_value = dot(normalize(u_LightDirection), vec3(0.f, 1.f, 0.f));
     // the shadow intensity should be 0 if day_time_value < 0.12
-    // should be the largest when day_time_value = 0.2
-    // should also be 0 if day_time_value > 0.8
-    float max_shadow_point = 0.2;
+    // should be the largest when day_time_value >= 0.2
     float start_shadow_point = 0.12;
-    float end_shadow_point = 0.8;
+    float end_shadow_point = 0.2;
     float intensity_factor;
-    if (day_time_value < start_shadow_point || day_time_value > end_shadow_point)
+    if (day_time_value < start_shadow_point)
         intensity_factor = 0.f;
-    else{
-        if (day_time_value < max_shadow_point){
-            intensity_factor = mix(0, 1, (day_time_value - start_shadow_point) / (max_shadow_point - start_shadow_point));
-        }
-        else {
-            intensity_factor = mix(1, 0, (day_time_value - max_shadow_point) / (end_shadow_point - max_shadow_point));
-        }
-    }
+    else if (day_time_value > end_shadow_point)
+        intensity_factor = 1.f;
+    else
+        intensity_factor = mix(0, 1, (day_time_value - start_shadow_point) / (end_shadow_point - start_shadow_point));
+
     shadow *= intensity_factor;
 
 
@@ -90,7 +85,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 //    if (dot_value < 0)
 
 
-    return shadow;
+    return shadow * 0.5;
 }
 
 
@@ -130,11 +125,41 @@ void main()
     float diffuseTerm = dot(normalize(fs_Nor), normalize(u_LightDirection));
     // Avoid negative lighting values
     diffuseTerm = clamp(diffuseTerm, 0, 1);
-    float ambientTerm = 0.5;
-    float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
-                                                        //to simulate ambient lighting. This ensures that faces that are not
-                                                        //lit by our point light are not completely black.
-    lightIntensity = clamp(lightIntensity, 0, 1);
+    float ambientTerm;
+//    float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
+//                                                        //to simulate ambient lighting. This ensures that faces that are not
+//                                                        //lit by our point light are not completely black.
+//    lightIntensity = clamp(lightIntensity, 0, 1);
+
+    float day_time_value = dot(normalize(u_LightDirection), vec3(0.f, 1.f, 0.f));
+
+    // determine the ambientTerm value
+    // if day_time_value > 0.8, ambientTerm should be the largest
+    // if day_time_value < 0, ambientTerm should be the smallest
+    float max_ambient = 0.7;
+    float min_ambient = 0.3;
+    float max_ambient_threshold = 0.8;
+    float min_ambient_threshold = 0.12;
+    if (day_time_value > max_ambient_threshold)
+        ambientTerm = max_ambient;
+    else if (day_time_value < min_ambient_threshold)
+        ambientTerm = min_ambient;
+    else
+        ambientTerm = mix(min_ambient, max_ambient, (day_time_value - min_ambient_threshold) / (max_ambient_threshold - min_ambient_threshold));
+
+    // determine the diffuseTerm value
+    // if day_time_value < 0, diffuseTerm should be the smallest
+    // if day_time_value > 0.1, diffuseTerm should be the largest
+    float min_diffuseTerm_factor = 0.2;
+    float max_diffuseTerm_factor = 1.0;
+    if (day_time_value < 0.12)
+        diffuseTerm *= min_diffuseTerm_factor;  // if at night, the diffuse term value should also be smaller
+    else if (day_time_value > 0.2)
+        diffuseTerm *= max_diffuseTerm_factor;
+    else
+        diffuseTerm *= mix(min_diffuseTerm_factor, max_diffuseTerm_factor, (day_time_value - 0.12) / 0.08);
+
+    float lightIntensity = clamp(ambientTerm + diffuseTerm, 0, 1);
 
     // add shadow
     float shadow = ShadowCalculation(fs_PosLightSpace);
