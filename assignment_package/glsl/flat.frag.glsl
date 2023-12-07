@@ -33,10 +33,62 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     float closestDepth = texture(u_ShadowMappingDepth, projCoords.xy).r;
     float currentDepth = projCoords.z;
 
-    float min_bias = 0.0001;
-    float max_bias = 0.001;
-    float bias = max(min_bias, max_bias * (1 - dot(normalize(fs_Nor), normalize(u_LightDirection))));
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    float min_bias = 0.00002;
+    float max_bias = 0.00018;
+    float dot_value = dot(normalize(fs_Nor), normalize(u_LightDirection));
+    float abs_dot_value = abs(dot_value);  // take the abs so that opposite face should also have no bias
+    float bias = max(min_bias, max_bias * (1 - abs_dot_value));
+
+
+    float shadow = 0.0;
+    if (dot_value < -0.000001)  // self shadow
+        shadow = 1.0;
+    else if (abs_dot_value < -0.000001)
+        {}   // the plane is too vertical to generate shadow
+    else if (currentDepth - bias > closestDepth) {
+        // current pixel is shadow, then soft it by its neighbours
+        vec2 texelSize = 1.0 / textureSize(u_ShadowMappingDepth, 0);
+
+        for(int x = -1; x <= 1; ++x)
+        {
+            for(int y = -1; y <= 1; ++y)
+            {
+                float pcfDepth = texture(u_ShadowMappingDepth, projCoords.xy + vec2(x, y) * texelSize).r;
+                shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+            }
+        }
+        shadow /= 9.0;
+    }
+
+    if (dot(normalize(u_LightDirection), vec3(0.f, 1.f, 0.f)) < 0.1)  // the flat plane, and sunlight near horizon
+        if (currentDepth - 0.001 < closestDepth)  // is definitely not in shadow
+            shadow = 0.f;
+
+
+    float day_time_value = dot(normalize(u_LightDirection), vec3(0.f, 1.f, 0.f));
+    // the shadow intensity should be 0 if day_time_value < 0.12
+    // should be the largest when day_time_value = 0.2
+    // should also be 0 if day_time_value > 0.8
+    float max_shadow_point = 0.2;
+    float start_shadow_point = 0.12;
+    float end_shadow_point = 0.8;
+    float intensity_factor;
+    if (day_time_value < start_shadow_point || day_time_value > end_shadow_point)
+        intensity_factor = 0.f;
+    else{
+        if (day_time_value < max_shadow_point){
+            intensity_factor = mix(0, 1, (day_time_value - start_shadow_point) / (max_shadow_point - start_shadow_point));
+        }
+        else {
+            intensity_factor = mix(1, 0, (day_time_value - max_shadow_point) / (end_shadow_point - max_shadow_point));
+        }
+    }
+    shadow *= intensity_factor;
+
+
+
+//    if (dot_value < 0)
+
 
     return shadow;
 }
