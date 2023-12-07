@@ -4,6 +4,7 @@
 // Refer to the lambert shader files for useful comments
 uniform sampler2D u_Texture;
 uniform sampler2D u_DepthTexture;
+uniform sampler2D u_ShadowMappingDepth;
 uniform int u_Time;
 uniform vec3 u_CameraPos;
 uniform mat4 u_Model;
@@ -14,6 +15,7 @@ in vec3 fs_UV;
 in vec4 fs_Nor;
 in vec4 fs_LightVec;
 in vec3 fs_Pos;
+in vec4 fs_PosLightSpace;
 
 out vec4 out_Col;
 
@@ -21,6 +23,22 @@ const float u_FogDensity = 0.04;
 const vec3 u_FogColor = vec3(0.37f, 0.74f, 1.0f);
 const float u_FogStart = 190.0;
 const float u_FogEnd = 210.0;
+
+
+float ShadowCalculation(vec4 fragPosLightSpace)
+{
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    float closestDepth = texture(u_ShadowMappingDepth, projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    float bias = 0.001;
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+}
+
 
 void main()
 {
@@ -64,13 +82,13 @@ void main()
                                                         //lit by our point light are not completely black.
     lightIntensity = clamp(lightIntensity, 0, 1);
 
-    //out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
+    // add shadow
+    float shadow = ShadowCalculation(fs_PosLightSpace);
+    vec3 pure_color = (1 - shadow) * diffuseColor.rgb * lightIntensity;
 
+    // add fog in distance
     float depth = length(fs_Pos - u_CameraPos);
     float fogFactor = clamp((u_FogEnd - depth) / (u_FogEnd - u_FogStart), 0.0, 1.0);
-    vec3 finalColor = mix(u_FogColor, diffuseColor.rgb * lightIntensity, fogFactor);
-
-
-
+    vec3 finalColor = mix(u_FogColor, pure_color, fogFactor);
     out_Col = vec4(finalColor, diffuseColor.a);
 }

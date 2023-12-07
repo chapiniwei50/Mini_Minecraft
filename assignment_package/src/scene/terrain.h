@@ -117,7 +117,7 @@ public:
     void multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 previousPlayerPos);
     std::unordered_set<int64_t> borderingZone(glm::ivec2 zone, int radius) const;
     void spawnVBOWorker(Chunk* c);
-    void spawnVBOWorkers(std::unordered_set<Chunk *> &chunksNeedingVBOs, int n);
+    void spawnVBOWorkers(int n);
     void spawnBlockTypeWorker(int64_t zone);
     void spawnBlockTypeWorkers(int n);
     void bind_terrain_vbo_data(int n);

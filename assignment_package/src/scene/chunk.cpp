@@ -347,10 +347,14 @@ void Chunk::bindVBOdata()
 }
 
 void Chunk::createChunkBlockData(){
-    for(int x = get_minX(); x < get_minX() + 16; ++x) {
-        for(int z = get_minZ(); z < get_minZ() + 16; ++z) {
+    for(int x = minX; x < minX + 16; ++x) {
+        for(int z = minZ; z < minZ + 16; ++z) {
             BiomeType biome;
             int height;
+            if (x < minX || z < minZ)
+                printf("here");
+            if (x >= minX + 16 || z >= minZ + 16)
+                printf("here");
             getHeight(x,z,height,biome);
             fillTerrainBlocks(x, z, biome, height);
         }

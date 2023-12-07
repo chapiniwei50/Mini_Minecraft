@@ -76,6 +76,7 @@ void ShaderProgram::create(const char *vertfile, const char *fragfile)
     unifViewProj   = context->glGetUniformLocation(prog, "u_ViewProj");
     unifColor      = context->glGetUniformLocation(prog, "u_Color");
     unifEffectType = context->glGetUniformLocation(prog, "u_EffectType");
+    unifLightSpaceMatrix = context->glGetUniformLocation(prog, "u_LightSpaceMatrix");
 
     unifSampler2D  = context->glGetUniformLocation(prog, "u_Texture");
     unifSamplerFrameBuffer = context->glGetUniformLocation(prog, "u_RenderedTexture");
@@ -155,6 +156,24 @@ void ShaderProgram::setViewProjMatrix(const glm::mat4 &vp)
                        GL_FALSE,
                     // Pointer to the first element of the matrix
                        &vp[0][0]);
+    }
+}
+
+void ShaderProgram::setLightSpaceMatrix(const glm::mat4 &m)
+{
+    // Tell OpenGL to use this shader program for subsequent function calls
+    useMe();
+
+    if(unifLightSpaceMatrix != -1) {
+    // Pass a 4x4 matrix into a uniform variable in our shader
+    // Handle to the matrix variable on the GPU
+    context->glUniformMatrix4fv(unifLightSpaceMatrix,
+                                // How many matrices to pass
+                                1,
+                                // Transpose the matrix? OpenGL uses column-major, so no.
+                                GL_FALSE,
+                                // Pointer to the first element of the matrix
+                                &m[0][0]);
     }
 }
 
