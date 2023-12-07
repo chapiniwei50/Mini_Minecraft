@@ -72,7 +72,7 @@ private:
 
     void visualize();
 
-    glm::vec3 lightInvDir = glm::vec3(0.f, 250.f, 0.f);
+    glm::vec3 lightInvDir = glm::vec3(10.f, 250.f, 10.f);
     glm::mat4 depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
     glm::mat4 depthProjMatrix = glm::ortho<float>(-150.f, 150.f, -150.f, 150.f, 0.1f, 1000.f);
     glm::mat4 LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
