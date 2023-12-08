@@ -265,23 +265,23 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
         }
     }
 
+    int block_to_generate_size, block_that_have_type_size, block_that_have_vbo_size;
+
     // Generate n = 1 Block Data each tick
+    block_to_generate_size = block_to_generate_id.size();
     spawnBlockTypeWorkers(2);
-    if(block_to_generate_id.size() != 0){
-        fprintf(stderr, "%d\t", block_to_generate_id.size());
-    }
-    QThreadPool::globalInstance()->waitForDone();
+    //QThreadPool::globalInstance()->waitForDone();
 
     //Generate VBO for newly generated terrain
     m_chunksThatHaveBlockDataLock.lock();
-    fprintf(stderr, "%d\t", m_chunksThatHaveBlockData.size());
+    block_that_have_type_size = m_chunksThatHaveBlockData.size();
     spawnVBOWorkers(8);
     m_chunksThatHaveBlockDataLock.unlock();
     //QThreadPool::globalInstance()->waitForDone();
 
     // Binding VBO data
     m_chunksThatHaveVBOsLock.lock();
-    fprintf(stderr, "%d\n", m_chunksThatHaveVBOs.size());
+    block_that_have_vbo_size = m_chunksThatHaveVBOs.size();
     bind_terrain_vbo_data(8);
 //    for (ChunkOpaqueTransparentVBOData* cd : m_chunksThatHaveVBOs) {
 //        cd->mp_chunk->bindVBOdata();
@@ -291,6 +291,9 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
 //    }
 //    m_chunksThatHaveVBOs.clear();
     m_chunksThatHaveVBOsLock.unlock();
+
+    if ((block_to_generate_size + block_that_have_type_size + block_that_have_vbo_size) != 0)
+        fprintf(stderr, "%d\t%d\t%d\n", block_to_generate_size, block_that_have_type_size, block_that_have_vbo_size);
 
 }
 
@@ -327,7 +330,6 @@ void Terrain::spawnBlockTypeWorkers(int n){
 void Terrain::bind_terrain_vbo_data(int n){
     while (n-- && m_chunksThatHaveVBOs.size() > 0){
        ChunkOpaqueTransparentVBOData* cd = *m_chunksThatHaveVBOs.begin();
-       m_chunksThatHaveVBOs.erase(m_chunksThatHaveVBOs.begin());
        if (cd->m_vboDataOpaque.size() + cd->m_vboDataTransparent.size() == 0)
             printf("here");
 
@@ -336,6 +338,7 @@ void Terrain::bind_terrain_vbo_data(int n){
        if (m_chunkCreated < 25 * 4 * 4) {
             m_chunkCreated += 1;
        }
+       m_chunksThatHaveVBOs.erase(m_chunksThatHaveVBOs.begin());
     }
 }
 

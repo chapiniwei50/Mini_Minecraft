@@ -46,6 +46,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     else if (abs_dot_value < -0.000001)
         {}   // the plane is too vertical to generate shadow
     else if (currentDepth - bias > closestDepth) {
+    //else {
         // current pixel is shadow, then soft it by its neighbours
         vec2 texelSize = 1.0 / textureSize(u_ShadowMappingDepth, 0);
 
