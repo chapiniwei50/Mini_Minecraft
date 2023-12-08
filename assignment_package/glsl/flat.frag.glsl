@@ -43,6 +43,8 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     float shadow = 0.0;
     if (dot_value < -0.000001)  // self shadow
         shadow = 1.0;
+    else if (projCoords.x < 0 || projCoords.x > 1 || projCoords.y < 0 || projCoords.y > 1)
+        {} // do not render shadow if it is out of the shadow depth map
     else if (abs_dot_value < -0.000001)
         {}   // the plane is too vertical to generate shadow
     else if (currentDepth - bias > closestDepth) {
@@ -70,7 +72,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     // the shadow intensity should be 0 if day_time_value < 0.12
     // should be the largest when day_time_value >= 0.2
     // but should be 0 if at noon
-    float start_shadow_point = 0.12;
+    float start_shadow_point = 0.05; //0.12;
     float end_shadow_point = 0.2;
     float intensity_factor;
     if (day_time_value < start_shadow_point)
