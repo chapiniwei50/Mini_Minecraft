@@ -331,6 +331,16 @@ void MyGL::update_light_vector() {
 //            lightInvDir *= -1;
     }
 
+    // set the projection matrix according to player height
+    // so that it can have higher resolution when the player is near ground
+    float curr_height = m_player.getHeight(m_terrain);
+    curr_height = curr_height > max_height ? max_height : curr_height;
+    float half_width = glm::mix(
+        min_half_width, max_half_width,
+        (curr_height - min_height) / (max_height - min_height)
+    );
+    depthProjMatrix = glm::ortho<float>(-half_width, half_width, -half_width, half_width, 0.1f, 1000.f);
+
     depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
     LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
     m_progFlat.setLightDirection(lightInvDir);
