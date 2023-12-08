@@ -110,8 +110,6 @@ int Chunk::is_boundary(int x, int y, int z) const
 
 void Chunk::createVBOdata()
 {
-    std::vector<glm::vec4> pos_nor_uv_opaque, pos_nor_uv_transparent;
-    std::vector<GLuint> idx_opaque, idx_transparent;
 
     for (unsigned int x = 0; x < 16; x++)
         for (unsigned int y = 0; y < 256; y++)
@@ -127,7 +125,7 @@ void Chunk::createVBOdata()
 
                 // choose the correct data buffer according to whther the block is opaque
                 // should change to a set for futhre work
-                std::vector<glm::vec4>& data_to_push = (t == WATER) ? pos_nor_uv_transparent : pos_nor_uv_opaque;
+                std::vector<glm::vec4>& data_to_push = (t == WATER) ? vboData.m_vboDataTransparent : vboData.m_vboDataOpaque;
 
                 glm::vec4 uv;
                 // draw x neg face
@@ -288,36 +286,29 @@ void Chunk::createVBOdata()
             }
 
     // generate index data according to the number of face to render
-    int num_faces_opaque = pos_nor_uv_opaque.size() / 4 / 3;
+    int num_faces_opaque = vboData.m_vboDataOpaque.size() / 4 / 3;
     for (int i = 0; i < num_faces_opaque; i++)
     {
-        idx_opaque.push_back(i * 4);
-        idx_opaque.push_back(i * 4 + 1);
-        idx_opaque.push_back(i * 4 + 2);
-        idx_opaque.push_back(i * 4);
-        idx_opaque.push_back(i * 4 + 2);
-        idx_opaque.push_back(i * 4 + 3);
+        vboData.m_idxDataOpaque.push_back(i * 4);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 1);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 2);
+        vboData.m_idxDataOpaque.push_back(i * 4);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 2);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 3);
     }
-    int num_faces_transparent = pos_nor_uv_transparent.size() / 4 / 3;
+    int num_faces_transparent = vboData.m_vboDataTransparent.size() / 4 / 3;
     for (int i = 0; i < num_faces_transparent; i++)
     {
-        idx_transparent.push_back(i * 4);
-        idx_transparent.push_back(i * 4 + 1);
-        idx_transparent.push_back(i * 4 + 2);
-        idx_transparent.push_back(i * 4);
-        idx_transparent.push_back(i * 4 + 2);
-        idx_transparent.push_back(i * 4 + 3);
+        vboData.m_idxDataTransparent.push_back(i * 4);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 1);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 2);
+        vboData.m_idxDataTransparent.push_back(i * 4);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 2);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 3);
     }
 
-    m_countOpq = idx_opaque.size();
-    m_countTra = idx_transparent.size();
-
-    // opaque
-    vboData.m_vboDataOpaque = pos_nor_uv_opaque;
-    vboData.m_idxDataOpaque = idx_opaque;
-    // transparent
-    vboData.m_vboDataTransparent = pos_nor_uv_transparent;
-    vboData.m_idxDataTransparent = idx_transparent;
+    m_countOpq = vboData.m_idxDataOpaque.size();
+    m_countTra = vboData.m_idxDataTransparent.size();
 }
 
 void Chunk::bindVBOdata()
@@ -351,8 +342,10 @@ void Chunk::createChunkBlockData(){
         for(int z = minZ; z < minZ + 16; ++z) {
             BiomeType biome;
             int height;
-            if (x < minX || z < minZ)
+            if (x < minX || z < minZ){
                 printf("here");
+                continue;
+            }
             if (x >= minX + 16 || z >= minZ + 16)
                 printf("here");
             getHeight(x,z,height,biome);
