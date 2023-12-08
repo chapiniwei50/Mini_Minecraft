@@ -9,7 +9,6 @@ BlockGenerateWorker::BlockGenerateWorker(int x, int z, std::vector<Chunk*> chunk
 
 void BlockGenerateWorker::run() {
     try{
-        //std::cout << "Block Type, Thread " << QThread::currentThreadId() << " start." << std::endl;
         for (Chunk* chunk : m_chunksToFill) {
 //            mp_chunksCompletedLock->lock();
 //            mp_chunksCompletedLock->unlock();

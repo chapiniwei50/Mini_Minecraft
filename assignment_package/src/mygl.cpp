@@ -168,9 +168,9 @@ void MyGL::tick() {
     m_lastTime = currentTime;
     m_player.tick(deltaT, m_inputs);
     m_terrain.multithreadedTerrainUpdate(m_player.mcr_position, m_player.mcr_lastFramePosition);
+    update_light_vector();
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
     sendPlayerDataToGUI(); // Updates the info in the secondary window displaying player data
-    update_light_vector();
 }
 
 void MyGL::sendPlayerDataToGUI() const {
@@ -255,7 +255,9 @@ void MyGL::renderShadowMappingDepth() {
     int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
     int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
     int drawBlockSize = m_terrain.zoneRadius * 32;
+//    glCullFace(GL_FRONT);
     m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_depth, true);
+//    glCullFace(GL_BACK);
 
     glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
 }
@@ -323,8 +325,15 @@ void MyGL::renderOverlay(){
 }
 
 void MyGL::update_light_vector() {
+    if (m_time % 2 == 0) {
+        lightInvDir = glm::vec3(rotMat * glm::vec4(lightInvDir, 0));
+//        if (glm::dot(lightInvDir, glm::vec3(0.f, 1.f, 0.f)) < 0)  // let the light always be above the horizon.
+//            lightInvDir *= -1;
+    }
+
     depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
     LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
+    m_progFlat.setLightDirection(lightInvDir);
 }
 
 void MyGL::keyPressEvent(QKeyEvent *e) {
