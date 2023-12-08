@@ -395,7 +395,7 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
                 break;
 
             case BiomeType::RIVER:
-                setBlockAt(x, y, z, WATER);
+                setBlockAt(x, y, z, DIRT);
                 break;
 
             default:
@@ -409,8 +409,8 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
         }
     }
 
-    // Fill WATER if there's empty space between 128 and 138
-    for (int y = 129; y < 138; ++y) {
+    // Fill WATER if there's empty space between 128 and 148
+    for (int y = 129; y < 146; ++y) {
         try {
             if (getBlockAt(x, y, z) == EMPTY) {
                 setBlockAt(x, y, z, WATER);
@@ -452,18 +452,18 @@ void Chunk::refreshAdjacentChunkVBOData(){
 }
 
 void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
-    x += 32768;
-    z += 32768;
+    x += 10000;
+    z += 10000;
     // Noise settings for biome determination and height variation.
-    const float biomeScale = 0.005f; // Larger scale for biome determination.
+    const float biomeScale = 0.0025f; // Larger scale for biome determination.
     const float terrainScale = 0.01f; // Terrain variation scale.
     const int baseHeight = 145;      // Base height for the terrain.
-    const float plainStart = 0;
-    const float plainEnd = 0.3;
-    const float desertStart = 0.4;
-    const float desertEnd = 0.7;
-    const float mountainStart = 0.8;
-    const float mountainEnd = 1.0;
+    const float plainStart = -1;
+    const float plainEnd = 0.4;
+    const float desertStart = 0.5;
+    const float desertEnd = 0.8;
+    const float mountainStart = 0.9;
+    const float mountainEnd = 1.2;
 
     float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 2 + 0.5;
 
@@ -476,26 +476,28 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
     }
     else if (biomeNoiseValue >= plainEnd && biomeNoiseValue <= desertStart) { // Transition between Plains and Desert
         float plainsHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
-        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;
         float smoothStepInput = (biomeNoiseValue - plainEnd) / (desertStart - plainEnd);
         float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
         height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
         b = smoothStepResult < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
     }
     else if (biomeNoiseValue >= desertStart && biomeNoiseValue <= desertEnd) { // Desert
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;
         b = BiomeType::DESSERT;
     }
-    else if (biomeNoiseValue >= desertEnd && biomeNoiseValue <= mountainStart) { // River
-        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
-        float mountainHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
-        float smoothStepInput = (biomeNoiseValue - desertEnd) / (desertEnd - mountainStart);
+    else if (biomeNoiseValue >= desertEnd && biomeNoiseValue <= mountainStart) { // Dessert and Mountains
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;
+        float mountainHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 10;
+        float smoothStepInput = (biomeNoiseValue - desertEnd) / (mountainStart - desertEnd);
         float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
-        height += mountainHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
+        float riverBedFactor = 1 - pow(cos(2 * M_PI * smoothStepResult),7.0);
+        float adjustedHeight = desertHeight * (1.0f - smoothStepResult) + mountainHeight * smoothStepResult;
+        height += adjustedHeight - 10 * riverBedFactor;
         b = BiomeType::RIVER;
     }
     else if (biomeNoiseValue >= mountainStart && biomeNoiseValue <= mountainEnd) { // Mountains
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 10;
         b = BiomeType::MOUNTAIN;
     }
     else{

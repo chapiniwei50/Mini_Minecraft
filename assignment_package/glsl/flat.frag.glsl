@@ -167,6 +167,7 @@ void main()
 
     // add shadow
     float shadow = ShadowCalculation(fs_PosLightSpace);
+    //float shadow = 0;
     vec3 pure_color = (1 - shadow) * diffuseColor.rgb * lightIntensity;
 
     // add fog in distance
