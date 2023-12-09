@@ -495,14 +495,14 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
     }
     else if (biomeNoiseValue >= desertEnd && biomeNoiseValue <= mountainStart) { // River
         float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
-        float mountainHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
+        float mountainHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 2) * 90 + 10;
         float smoothStepInput = (biomeNoiseValue - desertEnd) / (desertEnd - mountainStart);
         float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
         height += mountainHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
         b = BiomeType::RIVER;
     }
     else if (biomeNoiseValue >= mountainStart && biomeNoiseValue <= mountainEnd) { // Mountains
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30;
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 2) * 90 + 10;
         b = BiomeType::MOUNTAIN;
     }
     else{
