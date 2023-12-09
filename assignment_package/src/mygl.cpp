@@ -341,6 +341,12 @@ void MyGL::update_light_vector() {
     );
     depthProjMatrix = glm::ortho<float>(-half_width, half_width, -half_width, half_width, 0.1f, 1000.f);
 
+    // send the height value to gpu
+    m_progFlat.useMe();
+    int unifHeight = glGetUniformLocation(m_progFlat.prog, "u_height");
+    glUniform1f(unifHeight, curr_height);
+
+
     depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
     LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
     m_progFlat.setLightDirection(lightInvDir);
