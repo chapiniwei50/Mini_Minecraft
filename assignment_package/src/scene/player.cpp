@@ -102,6 +102,20 @@ bool Player::isOnGround( const Terrain &terrain, InputBundle &input) {
 
 }
 
+float Player::getHeight(const Terrain &terrain){
+    glm::vec3 curr_pos = glm::vec3(
+        floor(m_position.x - 0.5), floor(m_position.y), floor(m_position.z - 0.5)
+    );
+    float height = 0;
+    while (curr_pos.y - height > 0.01f){
+        if (terrain.getBlockAt(curr_pos.x, curr_pos.y - height, curr_pos.z) != EMPTY)
+            break;
+        height += 1;
+    }
+
+    return height;
+}
+
 bool Player::isInWater( const Terrain &terrain, InputBundle &input) {
 
     glm::vec3 corner = this->m_position + glm::vec3(0.5f, 1.5f, 0.5f);
