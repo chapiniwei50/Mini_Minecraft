@@ -110,8 +110,6 @@ int Chunk::is_boundary(int x, int y, int z) const
 
 void Chunk::createVBOdata()
 {
-    std::vector<glm::vec4> pos_nor_uv_opaque, pos_nor_uv_transparent;
-    std::vector<GLuint> idx_opaque, idx_transparent;
 
     for (unsigned int x = 0; x < 16; x++)
         for (unsigned int y = 0; y < 256; y++)
@@ -127,7 +125,7 @@ void Chunk::createVBOdata()
 
                 // choose the correct data buffer according to whther the block is opaque
                 // should change to a set for futhre work
-                std::vector<glm::vec4>& data_to_push = (t == WATER) ? pos_nor_uv_transparent : pos_nor_uv_opaque;
+                std::vector<glm::vec4>& data_to_push = (t == WATER) ? vboData.m_vboDataTransparent : vboData.m_vboDataOpaque;
 
                 glm::vec4 uv;
                 // draw x neg face
@@ -288,36 +286,29 @@ void Chunk::createVBOdata()
             }
 
     // generate index data according to the number of face to render
-    int num_faces_opaque = pos_nor_uv_opaque.size() / 4 / 3;
+    int num_faces_opaque = vboData.m_vboDataOpaque.size() / 4 / 3;
     for (int i = 0; i < num_faces_opaque; i++)
     {
-        idx_opaque.push_back(i * 4);
-        idx_opaque.push_back(i * 4 + 1);
-        idx_opaque.push_back(i * 4 + 2);
-        idx_opaque.push_back(i * 4);
-        idx_opaque.push_back(i * 4 + 2);
-        idx_opaque.push_back(i * 4 + 3);
+        vboData.m_idxDataOpaque.push_back(i * 4);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 1);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 2);
+        vboData.m_idxDataOpaque.push_back(i * 4);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 2);
+        vboData.m_idxDataOpaque.push_back(i * 4 + 3);
     }
-    int num_faces_transparent = pos_nor_uv_transparent.size() / 4 / 3;
+    int num_faces_transparent = vboData.m_vboDataTransparent.size() / 4 / 3;
     for (int i = 0; i < num_faces_transparent; i++)
     {
-        idx_transparent.push_back(i * 4);
-        idx_transparent.push_back(i * 4 + 1);
-        idx_transparent.push_back(i * 4 + 2);
-        idx_transparent.push_back(i * 4);
-        idx_transparent.push_back(i * 4 + 2);
-        idx_transparent.push_back(i * 4 + 3);
+        vboData.m_idxDataTransparent.push_back(i * 4);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 1);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 2);
+        vboData.m_idxDataTransparent.push_back(i * 4);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 2);
+        vboData.m_idxDataTransparent.push_back(i * 4 + 3);
     }
 
-    m_countOpq = idx_opaque.size();
-    m_countTra = idx_transparent.size();
-
-    // opaque
-    vboData.m_vboDataOpaque = pos_nor_uv_opaque;
-    vboData.m_idxDataOpaque = idx_opaque;
-    // transparent
-    vboData.m_vboDataTransparent = pos_nor_uv_transparent;
-    vboData.m_idxDataTransparent = idx_transparent;
+    m_countOpq = vboData.m_idxDataOpaque.size();
+    m_countTra = vboData.m_idxDataTransparent.size();
 }
 
 void Chunk::bindVBOdata()
@@ -351,8 +342,10 @@ void Chunk::createChunkBlockData(){
         for(int z = minZ; z < minZ + 16; ++z) {
             BiomeType biome;
             int height;
-            if (x < minX || z < minZ)
+            if (x < minX || z < minZ){
                 printf("here");
+                continue;
+            }
             if (x >= minX + 16 || z >= minZ + 16)
                 printf("here");
             getHeight(x,z,height,biome);
@@ -402,7 +395,7 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
                 break;
 
             case BiomeType::RIVER:
-                setBlockAt(x, y, z, WATER);
+                setBlockAt(x, y, z, DIRT);
                 break;
 
             default:
@@ -416,8 +409,8 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
         }
     }
 
-    // Fill WATER if there's empty space between 128 and 138
-    for (int y = 129; y < 138; ++y) {
+    // Fill WATER if there's empty space between 128 and 148
+    for (int y = 129; y < 146; ++y) {
         try {
             if (getBlockAt(x, y, z) == EMPTY) {
                 setBlockAt(x, y, z, WATER);
@@ -459,18 +452,18 @@ void Chunk::refreshAdjacentChunkVBOData(){
 }
 
 void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
-    x += 32768;
-    z += 32768;
+    x += 10000;
+    z += 10000;
     // Noise settings for biome determination and height variation.
-    const float biomeScale = 0.005f; // Larger scale for biome determination.
+    const float biomeScale = 0.0025f; // Larger scale for biome determination.
     const float terrainScale = 0.01f; // Terrain variation scale.
     const int baseHeight = 145;      // Base height for the terrain.
-    const float plainStart = 0;
-    const float plainEnd = 0.3;
-    const float desertStart = 0.4;
-    const float desertEnd = 0.7;
-    const float mountainStart = 0.8;
-    const float mountainEnd = 1.0;
+    const float plainStart = -1;
+    const float plainEnd = 0.4;
+    const float desertStart = 0.5;
+    const float desertEnd = 0.8;
+    const float mountainStart = 0.9;
+    const float mountainEnd = 1.2;
 
     float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 2 + 0.5;
 
@@ -483,26 +476,28 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
     }
     else if (biomeNoiseValue >= plainEnd && biomeNoiseValue <= desertStart) { // Transition between Plains and Desert
         float plainsHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
-        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;
         float smoothStepInput = (biomeNoiseValue - plainEnd) / (desertStart - plainEnd);
         float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
         height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
         b = smoothStepResult < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
     }
     else if (biomeNoiseValue >= desertStart && biomeNoiseValue <= desertEnd) { // Desert
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;
         b = BiomeType::DESSERT;
     }
-    else if (biomeNoiseValue >= desertEnd && biomeNoiseValue <= mountainStart) { // River
-        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 5;
-        float mountainHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 2) * 90 + 10;
-        float smoothStepInput = (biomeNoiseValue - desertEnd) / (desertEnd - mountainStart);
+    else if (biomeNoiseValue >= desertEnd && biomeNoiseValue <= mountainStart) { // Dessert and Mountains
+        float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;
+        float mountainHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 10;
+        float smoothStepInput = (biomeNoiseValue - desertEnd) / (mountainStart - desertEnd);
         float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
-        height += mountainHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
+        float riverBedFactor = 1 - pow(cos(2 * M_PI * smoothStepResult),7.0);
+        float adjustedHeight = desertHeight * (1.0f - smoothStepResult) + mountainHeight * smoothStepResult;
+        height += adjustedHeight - 10 * riverBedFactor;
         b = BiomeType::RIVER;
     }
     else if (biomeNoiseValue >= mountainStart && biomeNoiseValue <= mountainEnd) { // Mountains
-        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 2) * 90 + 10;
+        height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 10;
         b = BiomeType::MOUNTAIN;
     }
     else{

@@ -37,8 +37,8 @@ private:
 
     // settings about shadow mapping
     GLuint shadow_mapping_fbo;
-    int shad_width = 1258; //this->width();
-    int shad_height = 916; //this->height();
+    int shad_width = 1258 * 8; //this->width();
+    int shad_height = 916 * 8; //this->height();
     GLuint shadow_mapping_texture;
 
     Terrain m_terrain; // All of the Chunks that currently comprise the world.
@@ -72,10 +72,18 @@ private:
 
     void visualize();
 
-    glm::vec3 lightInvDir = glm::vec3(50.f, 200.f, 200.f);
+    // about shadow mapping
+    glm::vec3 lightInvDir = glm::vec3(10.f, 250.f, 10.f);
     glm::mat4 depthViewMatrix = glm::lookAt(lightInvDir + m_player.mcr_position, m_player.mcr_position, glm::vec3(0.f, 1.f, 0.f));
-    glm::mat4 depthProjMatrix = glm::ortho<float>(-100.f, 100.f, -100.f, 100.f, 0.1f, 1000.f);
+    // at max_height, the half width of the projection matrix should be max_half_width, and vice versa
+    float max_half_width = 200.f;
+    float min_half_width = 64.f;
+    float max_height = 50.f;
+    float min_height = 0.f;
+    glm::mat4 depthProjMatrix = glm::ortho<float>(-max_half_width, max_half_width, -max_half_width, max_half_width, 0.1f, 1000.f);
     glm::mat4 LightSpaceMatrix = depthProjMatrix * depthViewMatrix;
+    glm::vec3 axis = glm::vec3(1.1f, 0.f, 0.9f);
+    glm::mat4 rotMat = glm::rotate(glm::mat4(1.f), glm::radians(0.1f), axis);
     void update_light_vector();
 
 public:

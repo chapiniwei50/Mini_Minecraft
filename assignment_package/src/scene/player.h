@@ -65,4 +65,7 @@ public:
     void addBlock(Terrain *terrain);
 
     void processCameraRotation(float thetaChange, float phiChange);
+
+    // get the height of the player from ground
+    float getHeight(const Terrain &terrain);
 };
