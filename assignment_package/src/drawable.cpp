@@ -131,6 +131,22 @@ bool Drawable::bindPos()
     return m_PosGenerated;
 }
 
+bool Drawable::bindNor()
+{
+    if(m_BufGenerated){
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufNor);
+    }
+    return m_BufGenerated;
+}
+
+bool Drawable::bindCol()
+{
+    if(m_ColGenerated){
+        mp_context->glBindBuffer(GL_ARRAY_BUFFER, m_bufCol);
+    }
+    return m_ColGenerated;
+}
+
 //InstancedDrawable::InstancedDrawable(OpenGLContext *context)
 //    : Drawable(context), m_numInstances(0), m_bufPosOffset(-1), m_offsetGenerated(false)
 //{}

@@ -16,6 +16,8 @@ protected:
 
     GLuint m_bufUV;
     GLuint m_bufPos;
+    GLuint m_bufNor;
+    GLuint m_bufCol;
 
     bool m_idxOpqGenerated; // Set to TRUE by generateIdx(), returned by bindIdx().
     bool m_idxTraGenerated;
@@ -23,6 +25,8 @@ protected:
     bool m_bufDataTraGenerated;
     bool m_UVGenerated;
     bool m_PosGenerated;
+    bool m_BufGenerated;
+    bool m_ColGenerated;
 
     OpenGLContext* mp_context; // Since Qt's OpenGL support is done through classes like QOpenGLFunctions_3_2_Core,
                           // we need to pass our OpenGL context to the Drawable in order to call GL functions
@@ -58,6 +62,8 @@ public:
     bool bindDataTra();
     bool bindUV();
     bool bindPos();
+    bool bindNor();
+    bool bindCol();
 };
 
 // A subclass of Drawable that enables the base code to render duplicates of
