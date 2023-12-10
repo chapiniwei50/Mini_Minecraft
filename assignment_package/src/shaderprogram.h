@@ -35,6 +35,10 @@ public:
     int unifTime; // A handle for the "uniform" float representing time in the shader
     int unifCameraPos; // A handle for the "uniform" vec3 representing the camera position in the shader
 
+    // Sky demo
+    int unifDimensions;
+    int unifEye;
+
 public:
     ShaderProgram(OpenGLContext* context);
     // Sets up the requisite GL data and shaders from the given .glsl files
@@ -50,7 +54,7 @@ public:
     void setGeometryColor(glm::vec4 color);
     void seteffectType(const int type);
     // Draw the given object to our screen using this ShaderProgram's shaders
-    void draw(Drawable &d, int textureSlot = 0);
+    void drawSkybox(Drawable &d);
     // Draw the given object to our screen multiple times using instanced rendering
     //void drawInstanced(InstancedDrawable &d);
     // Utility function used in create()

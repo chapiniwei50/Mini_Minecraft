@@ -338,18 +338,84 @@ void Chunk::bindVBOdata()
 }
 
 void Chunk::createChunkBlockData(){
+    std::vector<std::vector<int>> heights(16, std::vector<int>(16));
+    std::vector<std::vector<BiomeType>> biomes(16, std::vector<BiomeType>(16));
+
     for(int x = minX; x < minX + 16; ++x) {
         for(int z = minZ; z < minZ + 16; ++z) {
             BiomeType biome;
             int height;
-            if (x < minX || z < minZ){
-                printf("here");
-                continue;
-            }
-            if (x >= minX + 16 || z >= minZ + 16)
-                printf("here");
             getHeight(x,z,height,biome);
+            heights[x-minX][z-minZ] = height;
+            biomes[x-minX][z-minZ] = biome;
             fillTerrainBlocks(x, z, biome, height);
+        }
+    }
+
+    placeTree(heights, biomes);
+
+}
+
+void Chunk::placeTree(std::vector<std::vector<int>>& heights, std::vector<std::vector<BiomeType>>& biomes){
+    std::srand(std::time(nullptr) + minX + minZ);
+    int numTrees = std::rand() % 3;
+    std::vector<glm::vec2> treesPos;
+    auto isValid = [&treesPos](const glm::vec2& newPoint) {
+        for (const auto& point : treesPos) {
+            if (std::abs(point.x - newPoint.x) <= 4 && std::abs(point.y - newPoint.y) <= 4) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    int maxTry = 10;
+    int tryTimes = 0;
+    while (treesPos.size() < numTrees && tryTimes < maxTry) {
+        tryTimes++;
+        glm::vec2 newPoint = {std::rand() % 11 + 3, std::rand() % 11 + 3};
+        if (isValid(newPoint))
+            treesPos.push_back(newPoint);
+    }
+
+    for (const auto& treePos : treesPos) {
+        int x = static_cast<int>(treePos.x);
+        int z = static_cast<int>(treePos.y);
+        int floorHeight = heights[x][z];
+        if(biomes[x][z] != BiomeType::PLAIN)
+            continue;
+
+        for(int dy = 1; dy <= 5 ; dy++)
+            setBlockAt(x, floorHeight + dy, z, TRUNK);
+
+        for(int dy = 3; dy <= 4 ; dy++){
+            for(int dx = -2; dx <= 2 ; dx ++ ){
+                for(int dz = -2; dz <= 2 ; dz ++ ){
+                    if(dx == 0 && dz == 0)
+                        continue;
+                    setBlockAt(x + dx, floorHeight + dy, z + dz, LEAF);
+                }
+            }
+        }
+
+        int dy = 5;
+        for(int dx = -2; dx <= 2 ; dx ++ ){
+            for(int dz = -2; dz <= 2 ; dz ++ ){
+                if((dx == 0 && dz == 0)   ||
+                    (dx == -2 && dz == -2) ||
+                    (dx == -2 && dz == 2)  ||
+                    (dx == 2 && dz == 2)   ||
+                    (dx == 2 && dz == -2)  )
+                    continue;
+                setBlockAt(x + dx, floorHeight + dy, z + dz, LEAF);
+            }
+        }
+
+        dy = 6;
+        for(int dx = -1; dx <= 1 ; dx ++ ){
+            for(int dz = -1; dz <= 1 ; dz ++ ){
+                setBlockAt(x + dx, floorHeight + dy, z + dz, LEAF);
+            }
         }
     }
 }
@@ -409,7 +475,7 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
         }
     }
 
-    // Fill WATER if there's empty space between 128 and 148
+    // Fill WATER if therew's empty space between 128 and 148
     for (int y = 129; y < 146; ++y) {
         try {
             if (getBlockAt(x, y, z) == EMPTY) {
@@ -480,7 +546,13 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
         float smoothStepInput = (biomeNoiseValue - plainEnd) / (desertStart - plainEnd);
         float smoothStepResult = glm::smoothstep(0.0f, 1.0f, smoothStepInput);
         height += plainsHeight * (1.0f - smoothStepResult) + desertHeight * smoothStepResult;
-        b = smoothStepResult < 0.5f ? BiomeType::PLAIN : BiomeType::DESSERT;
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::normal_distribution<> dis(0.5, 0.2);
+        float u = dis(gen);
+
+        b = smoothStepResult < u ? BiomeType::PLAIN : BiomeType::DESSERT;
     }
     else if (biomeNoiseValue >= desertStart && biomeNoiseValue <= desertEnd) { // Desert
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;

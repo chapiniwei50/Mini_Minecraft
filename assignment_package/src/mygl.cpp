@@ -10,7 +10,7 @@
 
 MyGL::MyGL(QWidget *parent)
     : OpenGLContext(parent),
-    m_progLambert(this), m_progFlat(this), m_depth(this),
+    m_progLambert(this), m_progFlat(this), m_depth(this),m_progSky(this),
     m_terrain(this), m_player(glm::vec3(32.f, 255.f, 32.f), m_terrain), m_lastTime(QDateTime::currentMSecsSinceEpoch()),m_WLoverlay(this), m_geomQuad(this),
     m_frameBuffer(this, this->width(), this->height(), this->devicePixelRatio()),
     m_time(0)
@@ -98,37 +98,14 @@ void MyGL::initializeGL()
     m_geomQuad.createVBOdata();
 
     m_WLoverlay.create(":/glsl/WLoverlay.vert.glsl", ":/glsl/WLoverlay.frag.glsl");
-    // Create and set up the flat lighting shader
     m_progFlat.create(":/glsl/flat.vert.glsl", ":/glsl/flat.frag.glsl");
-    // Create and set up the diffuse shader
     m_progLambert.create(":/glsl/lambert.vert.glsl", ":/glsl/lambert.frag.glsl");
     m_depth.create(":/glsl/depth.vert.glsl", ":/glsl/depth.frag.glsl");
+    m_progSky.create(":/glsl/sky.vert.glsl", ":/glsl/sky.frag.glsl");
 
-    // Set a color with which to draw geometry.
-    // This will ultimately not be used when you change
-    // your program to render Chunks with vertex colors
-    // and UV coordinates
-    m_progLambert.setGeometryColor(glm::vec4(0,1,0,1));
+    //m_progLambert.setGeometryColor(glm::vec4(0,1,0,1));
 
-#ifdef Q_OS_MAC
-    QString sourceFilePath = __FILE__;
-    QFileInfo sourceFileInfo(sourceFilePath);
-    QDir baseDir = sourceFileInfo.absoluteDir();
-    QString fullPath = baseDir.absolutePath();
-    QString keyDirectoryName = "mini-minecraft";
-    int keyDirIndex = fullPath.indexOf(keyDirectoryName);
-    QString projectRootPath;
-    if (keyDirIndex != -1) {
-        projectRootPath = fullPath.left(keyDirIndex + keyDirectoryName.length());
-    }
-    QString texturePath = projectRootPath + "/assignment_package/textures/minecraft_textures_all.png";
-    m_terrain.create_load_texture(texturePath.toUtf8().constData());
-#endif
-
-#ifdef Q_OS_WIN
-    //m_terrain.create_load_texture("D:/local_documentation/major/CIS4600/mini-minecraft-mahjong/textures/minecraft_textures_all.png");
     m_terrain.create_load_texture(":/textures/minecraft_textures_all.png");
-#endif
 
     // We have to have a VAO bound in OpenGL 3.2 Core. But if we're not
     // using multiple VAOs, we can just bind one once.
@@ -150,6 +127,11 @@ void MyGL::resizeGL(int w, int h) {
     m_progLambert.setViewProjMatrix(viewproj);
     m_progFlat.setViewProjMatrix(viewproj);
 
+    m_progSky.setViewProjMatrix(glm::inverse(viewproj));
+    m_progSky.useMe();
+    glUniform2i(m_progSky.unifDimensions, width(), height());
+    glUniform3f(m_progSky.unifEye, m_player.mcr_position.x, m_player.mcr_position.y, m_player.mcr_position.z);
+
     m_frameBuffer.resize(this->width(), this->height(), this->devicePixelRatio());
     m_frameBuffer.destroy();
     m_frameBuffer.create();
@@ -168,6 +150,7 @@ void MyGL::tick() {
     m_lastTime = currentTime;
     m_player.tick(deltaT, m_inputs);
     m_terrain.multithreadedTerrainUpdate(m_player.mcr_position, m_player.mcr_lastFramePosition);
+    m_time++;
     update_light_vector();
     update(); // Calls paintGL() as part of a larger QOpenGLWidget pipeline
     sendPlayerDataToGUI(); // Updates the info in the secondary window displaying player data
@@ -190,14 +173,99 @@ void MyGL::sendPlayerDataToGUI() const {
 // so paintGL() called at a rate of 60 frames per second.
 void MyGL::paintGL() {
     // Clear the screen so that we only see newly drawn images
-
     //renderDepthView();
+
     renderShadowMappingDepth();
-//    visualize();
+    //renderSkybox();
     renderTerrain();
     renderOverlay();
+}
 
+void MyGL::renderSkybox(){
+    m_progSky.useMe();
+    m_progSky.setViewProjMatrix(glm::inverse(m_player.mcr_camera.getViewProj()));
+    m_progSky.setCameraPosition(m_player.mcr_camera.mcr_position);
+    m_progSky.setTime(m_time);
+    m_progSky.drawSkybox(m_geomQuad);
+}
 
+void MyGL::renderShadowMappingDepth() {
+    glViewport(0, 0, shad_width, shad_height);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadow_mapping_fbo);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // render scene
+    m_depth.setModelMatrix(glm::mat4(1.0f));
+    m_depth.setViewProjMatrix(LightSpaceMatrix);
+
+    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
+    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
+    int drawBlockSize = m_terrain.zoneRadius * 32;
+    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_depth, true);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
+}
+
+// TODO: Change this so it renders the nine zones of generated
+// terrain that surround the player (refer to Terrain::m_generatedTerrain
+// for more info)f
+void MyGL::renderTerrain() {
+
+    m_frameBuffer.bindFrameBuffer();
+    glViewport(0, 0, this->width(), this->height());
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CW);
+    glCullFace(GL_BACK);
+
+    m_progFlat.useMe();
+
+    m_progFlat.setLightSpaceMatrix(LightSpaceMatrix);
+    // activate shadow mapping depth texture
+    glActiveTexture(GL_TEXTURE0 + 2);
+    glBindTexture(GL_TEXTURE_2D, shadow_mapping_texture);
+    GLuint shadMapDepthUnif = glGetUniformLocation(m_progFlat.prog, "u_ShadowMappingDepth");
+    glUniform1i(shadMapDepthUnif, 2);
+
+    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
+    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
+
+    int drawBlockSize = m_terrain.zoneRadius * 32;
+    // draw opaque
+    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, true);
+    // draw transparent
+    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, false);
+
+    // update time for shader
+    m_progFlat.setTime(m_time);
+    m_progFlat.setCameraPosition(m_player.mcr_camera.mcr_position);
+
+    //set model and view matrix
+    glDisable(GL_DEPTH_TEST);
+    m_progFlat.setModelMatrix(glm::mat4());
+    m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
+    glEnable(GL_DEPTH_TEST);
+}
+
+void MyGL::renderOverlay(){
+    // If in water
+    if (m_terrain.m_chunks.size()>0 && m_player.isInWater(m_terrain, m_inputs)) {
+        m_WLoverlay.seteffectType(1);
+        // If in lava
+    } else if (m_terrain.m_chunks.size()>0 &&m_player.isInLava(m_terrain, m_inputs)) {
+        m_WLoverlay.seteffectType(2);
+        // If in air
+    } else {
+        m_WLoverlay.seteffectType(0);
+
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
+    glViewport(0, 0, this->width() *  this->devicePixelRatio(), this->height() *  this->devicePixelRatio());
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    m_WLoverlay.useMe();
+    m_WLoverlay.setTime(m_time);
+    m_frameBuffer.bindToTextureSlot(0);
+    m_WLoverlay.drawEffect(m_geomQuad);
 }
 
 
@@ -243,86 +311,6 @@ void MyGL::renderDepthView(){
     glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
 }
 
-void MyGL::renderShadowMappingDepth() {
-    glViewport(0, 0, shad_width, shad_height);
-    glBindFramebuffer(GL_FRAMEBUFFER, shadow_mapping_fbo);
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    // render scene
-    m_depth.setModelMatrix(glm::mat4(1.0f));
-    m_depth.setViewProjMatrix(LightSpaceMatrix);
-
-    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
-    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
-    int drawBlockSize = m_terrain.zoneRadius * 32;
-//    glCullFace(GL_FRONT);
-    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_depth, true);
-//    glCullFace(GL_BACK);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
-}
-
-// TODO: Change this so it renders the nine zones of generated
-// terrain that surround the player (refer to Terrain::m_generatedTerrain
-// for more info)f
-void MyGL::renderTerrain() {
-
-    m_frameBuffer.bindFrameBuffer();
-    glViewport(0, 0, this->width(), this->height());
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_CULL_FACE);
-    glFrontFace(GL_CW);
-    glCullFace(GL_BACK);
-
-    m_progFlat.useMe();
-
-    m_progFlat.setLightSpaceMatrix(LightSpaceMatrix);
-    // activate shadow mapping depth texture
-    glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, shadow_mapping_texture);
-    GLuint shadMapDepthUnif = glGetUniformLocation(m_progFlat.prog, "u_ShadowMappingDepth");
-    glUniform1i(shadMapDepthUnif, 2);
-
-    int x = static_cast<int>(floor(m_player.mcr_position.x / 16.f) * 16);
-    int z = static_cast<int>(floor(m_player.mcr_position.z / 16.f) * 16);
-
-    int drawBlockSize = m_terrain.zoneRadius * 32;
-    // draw opaque
-    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, true);
-    // draw transparent
-    m_terrain.draw(x - drawBlockSize, x + drawBlockSize, z - drawBlockSize, z + drawBlockSize, &m_progFlat, false);
-
-    // update time for shader
-    m_progFlat.setTime(m_time);
-    m_time++;
-    m_progFlat.setCameraPosition(m_player.mcr_camera.mcr_position);
-
-    //set model and view matrix
-    glDisable(GL_DEPTH_TEST);
-    m_progFlat.setModelMatrix(glm::mat4());
-    m_progFlat.setViewProjMatrix(m_player.mcr_camera.getViewProj());
-    glEnable(GL_DEPTH_TEST);
-}
-
-void MyGL::renderOverlay(){
-    // If in water
-    if (m_terrain.m_chunks.size()>0 && m_player.isInWater(m_terrain, m_inputs)) {
-        m_WLoverlay.seteffectType(1);
-        // If in lava
-    } else if (m_terrain.m_chunks.size()>0 &&m_player.isInLava(m_terrain, m_inputs)) {
-        m_WLoverlay.seteffectType(2);
-        // If in air
-    } else {
-        m_WLoverlay.seteffectType(0);
-
-    }
-    glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
-    glViewport(0, 0, this->width() *  this->devicePixelRatio(), this->height() *  this->devicePixelRatio());
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    m_WLoverlay.useMe();
-    m_frameBuffer.bindToTextureSlot(0);
-    m_WLoverlay.drawEffect(m_geomQuad);
-}
 
 void MyGL::update_light_vector() {
     if (m_time % 2 == 0) {

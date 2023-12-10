@@ -93,6 +93,18 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     return shadow * 0.5;
 }
 
+vec3 getDistortedNormal(vec3 normal, vec3 pos, float time) {
+    //partial derivative of the surface
+    float waveAmplitude = 0.1;
+    float waveFrequency = 2.0;
+    float waveTime = u_Time * 0.1;
+    float dx = waveAmplitude * waveFrequency * 1.3 * cos(pos.x * waveFrequency * 1.3 + pos.z * waveFrequency * 0.7 + time);
+    float dz = waveAmplitude * waveFrequency * 0.7 * cos(pos.x * waveFrequency * 1.3 + pos.z * waveFrequency * 0.7 + time);
+
+    vec3 newNormal = vec3(dx, -1, dz);
+    return normalize(newNormal);
+}
+
 
 void main()
 {
@@ -100,15 +112,18 @@ void main()
 
     if (abs(fs_UV.z - 1.0) < 0.001)  // WATER
     {
+        float waveTime = u_Time * 0.1;
+        vec3 nor = getDistortedNormal(fs_Nor, fs_Pos, waveTime);
+
         vec3 viewDir = normalize(fs_Pos - u_CameraPos);
-        vec3 reflectedDir = reflect(viewDir, normalize(fs_Nor));
+        vec3 reflectedDir = reflect(viewDir, normalize(nor));
 
         vec3 sunDirection = normalize(u_LightDirection);
         float angle = dot(reflectedDir, sunDirection);
         angle = acos(clamp(angle, -1.0, 1.0));
 
-        const float thresholdMin = radians(1.0);
-        const float thresholdMax = radians(5.0);
+        const float thresholdMin = radians(3.0);
+        const float thresholdMax = radians(30.0);
         float blendFactor = smoothstep(thresholdMax, thresholdMin, angle);
 
         vec4 sunColor = vec4(1.0, 1.0, 1.0, 1.0);

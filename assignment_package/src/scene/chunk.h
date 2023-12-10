@@ -1,6 +1,6 @@
 #pragma once
 #include "chunkhelper.h"
-
+#include <random>
 
 class Terrain;
 struct ChunkOpaqueTransparentVBOData;
@@ -68,6 +68,7 @@ public:
 
     void fillTerrainBlocks(int x, int z, BiomeType biome, int height);
     void getHeight(int x, int z, int& y, BiomeType& b);
+    void placeTree(std::vector<std::vector<int>>& heights, std::vector<std::vector<BiomeType>>& biomes);
     float perlinNoiseSingle(glm::vec2 uv);
     float PerlinNoise2D(float x, float z, float frequency, int octaves);
     float WorleyNoise(float x, float y);

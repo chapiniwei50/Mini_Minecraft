@@ -292,8 +292,8 @@ void Terrain::multithreadedTerrainUpdate(glm::vec3 currentPlayerPos, glm::vec3 p
 //    m_chunksThatHaveVBOs.clear();
     m_chunksThatHaveVBOsLock.unlock();
 
-    if ((block_to_generate_size + block_that_have_type_size + block_that_have_vbo_size) != 0)
-        fprintf(stderr, "%d\t%d\t%d\n", block_to_generate_size, block_that_have_type_size, block_that_have_vbo_size);
+    //if ((block_to_generate_size + block_that_have_type_size + block_that_have_vbo_size) != 0)
+        //fprintf(stderr, "%d\t%d\t%d\n", block_to_generate_size, block_that_have_type_size, block_that_have_vbo_size);
 
 }
 

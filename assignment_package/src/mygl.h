@@ -28,7 +28,8 @@ private:
     ShaderProgram m_progLambert;// A shader program that uses lambertian reflection
     ShaderProgram m_progFlat;// A shader program that uses "flat" reflection (no shadowing at all)
     ShaderProgram m_WLoverlay; // A shader program for overlay of being underwater and underlava
-    ShaderProgram m_depth; //
+    ShaderProgram m_depth;
+    ShaderProgram m_progSky; // A screen-space shader for creating the sky background
 
     GLuint vao; // A handle for our vertex array object. This will store the VBOs created in our geometry classes.
         // Don't worry too much about this. Just know it is necessary in order to render geometry.
@@ -69,6 +70,7 @@ private:
     void renderDepthView();
     void renderOverlay();
     void renderShadowMappingDepth();
+    void renderSkybox();
 
     void visualize();
 
