@@ -315,8 +315,8 @@ void MyGL::renderDepthView(){
 void MyGL::update_light_vector() {
     if (m_time % 2 == 0) {
         lightInvDir = glm::vec3(rotMat * glm::vec4(lightInvDir, 0));
-//        if (glm::dot(lightInvDir, glm::vec3(0.f, 1.f, 0.f)) < 0)  // let the light always be above the horizon.
-//            lightInvDir *= -1;
+        if (glm::dot(lightInvDir, glm::vec3(0.f, 1.f, 0.f)) < 0)  // let the light always be above the horizon.
+            lightInvDir *= -1;
     }
 
     // set the projection matrix according to player height
