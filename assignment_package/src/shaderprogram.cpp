@@ -14,7 +14,7 @@ ShaderProgram::ShaderProgram(OpenGLContext *context)
     unifModel(-1), unifModelInvTr(-1), unifViewProj(-1), unifColor(-1),
     unifLightSpaceMatrix(-1), unifLightDirection(-1), unifEffectType(-1),
     unifSampler2D(-1), unifSamplerFrameBuffer(-1),
-    unifTime(-1), unifCameraPos(-1),
+    unifTime(-1), unifCameraPos(-1),unifScreenSize(-1),
       context(context)
 {}
 
@@ -90,6 +90,7 @@ void ShaderProgram::create(const char *vertfile, const char *fragfile)
     unifDimensions = context->glGetUniformLocation(prog, "u_Dimensions");
     unifEye = context->glGetUniformLocation(prog, "u_Eye");
 
+    unifScreenSize = context->glGetUniformLocation(prog, "u_ScreenSize");
     context->printGLErrorLog();
 }
 
@@ -116,6 +117,14 @@ void ShaderProgram::setLightDirection(const glm::vec3 &lightDirection)
     }
 }
 
+void ShaderProgram::setScreenSize(const glm::vec2 &screenSize)
+{
+    useMe();
+
+    if (unifScreenSize != -1) {
+        context->glUniform3fv(unifScreenSize, 1, &screenSize[0]);
+    }
+}
 
 void ShaderProgram::setTime(int t)
 {

@@ -36,26 +36,22 @@ enum class BiomeType : unsigned char{
     NULLBIOME,
     DESSERT,
     PLAIN,
-    MOUNTAIN,
+    HILL,
     RIVER,
     LAVA
 };
-
-
-
-
 
 #define GRID 0.0625
 
 const static std::unordered_map<BlockType, std::unordered_map<Direction, glm::vec2, EnumHash>, EnumHash> blockFaceUVs
 {
     {GRASS, std::unordered_map<Direction, glm::vec2, EnumHash>{
-           {XPOS, glm::vec2(3 * GRID, 15 * GRID)},
-           {XNEG, glm::vec2(3 * GRID, 15 * GRID)},
-           {YPOS, glm::vec2(8 * GRID, 13 * GRID)},
-           {YNEG, glm::vec2(2 * GRID, 15 * GRID)},
-           {ZPOS, glm::vec2(3 * GRID, 15 * GRID)},
-           {ZNEG, glm::vec2(3 * GRID, 15 * GRID)}}},
+           {XPOS, glm::vec2(4 * GRID, 11 * GRID)},
+           {XNEG, glm::vec2(4 * GRID, 11 * GRID)},
+           {YPOS, glm::vec2(0 * GRID, 15 * GRID)},
+           {YNEG, glm::vec2(2 * GRID, 11 * GRID)},
+           {ZPOS, glm::vec2(4 * GRID, 11 * GRID)},
+           {ZNEG, glm::vec2(4 * GRID, 11 * GRID)}}},
     {DIRT, std::unordered_map<Direction, glm::vec2, EnumHash>{
            {XPOS, glm::vec2(2 * GRID, 15 * GRID)},
            {XNEG, glm::vec2(2 * GRID, 15 * GRID)},
@@ -85,17 +81,17 @@ const static std::unordered_map<BlockType, std::unordered_map<Direction, glm::ve
            {ZPOS, glm::vec2(14 * GRID, 0 * GRID)},
            {ZNEG, glm::vec2(14 * GRID, 0 * GRID)}}},
     {TRUNK, std::unordered_map<Direction, glm::vec2, EnumHash>{
-                                                              {XPOS, glm::vec2(4 * GRID, 14 * GRID)},
-                                                              {XNEG, glm::vec2(4 * GRID, 14 * GRID)},
-                                                              {YPOS, glm::vec2(5 * GRID, 14 * GRID)},
-                                                              {YNEG, glm::vec2(5 * GRID, 14 * GRID)},
-                                                              {ZPOS, glm::vec2(4 * GRID, 14 * GRID)},
-                                                              {ZNEG, glm::vec2(4 * GRID, 14 * GRID)}}},
+            {XPOS, glm::vec2(4 * GRID, 14 * GRID)},
+            {XNEG, glm::vec2(4 * GRID, 14 * GRID)},
+            {YPOS, glm::vec2(5 * GRID, 14 * GRID)},
+            {YNEG, glm::vec2(5 * GRID, 14 * GRID)},
+            {ZPOS, glm::vec2(4 * GRID, 14 * GRID)},
+            {ZNEG, glm::vec2(4 * GRID, 14 * GRID)}}},
     {LEAF, std::unordered_map<Direction, glm::vec2, EnumHash>{
-                                                              {XPOS, glm::vec2(5 * GRID, 12 * GRID)},
-                                                              {XNEG, glm::vec2(5 * GRID, 12 * GRID)},
-                                                              {YPOS, glm::vec2(5 * GRID, 12 * GRID)},
-                                                              {YNEG, glm::vec2(5 * GRID, 12 * GRID)},
-                                                              {ZPOS, glm::vec2(5 * GRID, 12 * GRID)},
-                                                              {ZNEG, glm::vec2(5 * GRID, 12 * GRID)}}}
+            {XPOS, glm::vec2(5 * GRID, 12 * GRID)},
+            {XNEG, glm::vec2(5 * GRID, 12 * GRID)},
+            {YPOS, glm::vec2(5 * GRID, 12 * GRID)},
+            {YNEG, glm::vec2(5 * GRID, 12 * GRID)},
+            {ZPOS, glm::vec2(5 * GRID, 12 * GRID)},
+            {ZNEG, glm::vec2(5 * GRID, 12 * GRID)}}}
 };

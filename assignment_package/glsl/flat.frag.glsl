@@ -5,6 +5,7 @@
 uniform sampler2D u_Texture;
 uniform sampler2D u_DepthTexture;
 uniform sampler2D u_ShadowMappingDepth;
+uniform vec2 u_ScreenSize;
 uniform int u_Time;
 uniform vec3 u_CameraPos;
 uniform mat4 u_Model;
@@ -105,6 +106,75 @@ vec3 getDistortedNormal(vec3 normal, vec3 pos, float time) {
     return normalize(newNormal);
 }
 
+vec2 random2( vec2 p ) {
+    return fract(sin(vec2(dot(p, vec2(127.1, 311.7)),
+                 dot(p, vec2(269.5,183.3))))
+                 * 43758.5453);
+}
+
+float surflet(vec2 P, vec2 gridPoint) {
+    // Compute falloff function by converting linear distance to a polynomial
+    float distX = abs(P.x - gridPoint.x);
+    float distY = abs(P.y - gridPoint.y);
+    float tX = 1 - 6 * pow(distX, 5.f) + 15 * pow(distX, 4.f) - 10 * pow(distX, 3.f);
+    float tY = 1 - 6 * pow(distY, 5.f) + 15 * pow(distY, 4.f) - 10 * pow(distY, 3.f);
+    // Get the random vector for the grid point
+    vec2 gradient = 2.f * random2(gridPoint) - vec2(1.f);
+    // Get the vector from the grid point to P
+    vec2 diff = P - gridPoint;
+    // Get the value of our height field by dotting grid->P with our gradient
+    float height = dot(diff, gradient);
+    // Scale our height field (i.e. reduce it) by our polynomial falloff function
+    return height * tX * tY;
+}
+
+float perlinNoise(vec2 uv) {
+        float surfletSum = 0.f;
+        // Iterate over the four integer corners surrounding uv
+        for(int dx = 0; dx <= 1; ++dx) {
+                for(int dy = 0; dy <= 1; ++dy) {
+                        surfletSum += surflet(uv, floor(uv) + vec2(dx, dy));
+                }
+        }
+        return surfletSum;
+}
+
+vec3 getBaseColor(float noiseValue){
+    vec3 baseColor;
+    vec3 lightGreen = vec3(0.5, 0.8, 0.3);
+    vec3 darkGreen = vec3(0.0, 0.5, 0.0);
+    vec3 yellow = vec3(0.3, 0.8, 0.5);
+    vec3 lightBlue = vec3(0.2, 0.7, 0.4);
+    vec3 pink = vec3(1.0, 0.75, 0.79);
+
+    if (noiseValue <= 0.25) {
+        baseColor = mix(lightGreen, darkGreen, smoothstep(0.0, 0.25, noiseValue));
+    } else if (noiseValue <= 0.5) {
+        baseColor = mix(darkGreen, yellow, smoothstep(0.25, 0.5, noiseValue));
+    } else if (noiseValue <= 0.75) {
+        baseColor = mix(yellow, lightBlue, smoothstep(0.5, 0.75, noiseValue));
+    } else {
+        baseColor = mix(lightBlue, pink, smoothstep(0.75, 1.0, noiseValue));
+    }
+    return baseColor;
+}
+
+const mat3 sobel_kernel_x = mat3(
+    -1, 0, 1,
+    -2, 0, 2,
+    -1, 0, 1
+);
+
+const mat3 sobel_kernel_y = mat3(
+    -1, -2, -1,
+    0,  0,  0,
+    1,  2,  1
+);
+
+vec3 apply_sobel(mat3 I, mat3 kernel) {
+    float gx = dot(I[0], kernel[0]) + dot(I[1], kernel[1]) + dot(I[2], kernel[2]);
+    return vec3(gx);
+}
 
 void main()
 {
@@ -136,6 +206,28 @@ void main()
     {
         float time_offset = (u_Time % 500) / 500.0;
         diffuseColor = texture(u_Texture, fs_UV.xy + vec2(1.0/16.0, 1.0/16.0) * time_offset);
+    }
+    else if (abs(fs_UV.z - 0.3) < 0.001)  // GRASSSIDE
+    {
+        vec4 greyTextureColor = texture(u_Texture, fs_UV.xy);
+        float colorSum = greyTextureColor.r + greyTextureColor.g + greyTextureColor.b;
+        if (colorSum < 0.1) {
+            diffuseColor = greyTextureColor;
+        } else {
+            vec2 inputvec2 = vec2(fs_Pos.x,fs_Pos.z);
+            float noiseValue = perlinNoise(inputvec2 * 0.01) + 0.5;
+            vec3 baseColor = getBaseColor(noiseValue);
+            vec4 greyTextureColor = texture(u_Texture, fs_UV.xy);
+            diffuseColor = vec4(greyTextureColor.rgb * baseColor, greyTextureColor.a);
+        }
+    }
+    else if (abs(fs_UV.z - 0.2) < 0.001)  // GRASSTOP
+    {
+        vec2 inputvec2 = vec2(fs_Pos.x,fs_Pos.z);
+        float noiseValue = perlinNoise(inputvec2 * 0.01) + 0.5;
+        vec3 baseColor = getBaseColor(noiseValue);
+        vec4 greyTextureColor = texture(u_Texture, fs_UV.xy);
+        diffuseColor = vec4(greyTextureColor.rgb * baseColor, greyTextureColor.a);
     }
     else{
         diffuseColor = texture(u_Texture, fs_UV.xy);
@@ -186,9 +278,27 @@ void main()
     //float shadow = 0;
     vec3 pure_color = (1 - shadow) * diffuseColor.rgb * lightIntensity;
 
+    mat3 I;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            float depth = texelFetch(u_DepthTexture, ivec2(gl_FragCoord.xy) + ivec2(i - 1, j - 1), 0).r;
+            I[i][j] = depth;
+        }
+    }
+
+    vec3 gx = apply_sobel(I, sobel_kernel_x);
+    vec3 gy = apply_sobel(I, sobel_kernel_y);
+
+    vec3 edgeStrength = (gx * gx + gy * gy);
+    vec3 originalColor = vec3(1.0);
+    pure_color = mix(pure_color, edgeStrength, edgeStrength.r);
+
     // add fog in distance
     float depth = length(fs_Pos - u_CameraPos);
     float fogFactor = clamp((u_FogEnd - depth) / (u_FogEnd - u_FogStart), 0.0, 1.0);
     vec3 finalColor = mix(u_FogColor, pure_color, fogFactor);
     out_Col = vec4(finalColor, diffuseColor.a);
+
+
+
 }
