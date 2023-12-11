@@ -71,4 +71,37 @@ Futher works:
 2, For multi-threading, in Terrain::spawnBlockTypeWorker, currently the main thread waits for the child that generates block type to finish. We need to remove this wait, and move m_generatedTerrain.insert(zone) inside child thread codes, so that the rendering can be much more efficient. It is the same case in line 230 of waiting all VBO workers to finish. I added this waiting to ensure correctness, but it turns out that this waiting is unnecessary.
 3, For post-processing, the work is still very problematic. First, for detecting whether the player is inside the water, the decision boundary should be in the same height as the camera. Second, currently the post process pipeline is still incorrect. When the player is not in water or lava, the shader directly render the results to screen. The framebuffer is only used when player is in water or lava. But the pipeline of writing surface shader output to framebuffer, loading from framebuffer and rendering to screen is still not corrent. I don't have enough time to fix it before deadline though.
 
+Milestone 3
 
+Wang Ruipeng:
+Procedural grass color
+
+In the fragment shader, I started by checking if the current fragment belongs to the `GRASS_SIDE` or `GRASS_TOP` textures, using `fs_UV.z` to identify the texture type, which is same technique used in distinguishing water and lave. In both cases, the color of the grass is determined by combining the grey texture color with a biome-specific base color. The base color is implemented in the getBaseColor function, which takes a noiseValue as input and returns a vec3 representing the base color. For the GRASS_SIDE texture, if the summed RGB values of the grey texture color are less than 2.0, the original grey texture color is used. This is to make sure only the grass part of the texture changes color. Otherwise, the color is modified based on the color calculated from the Perlin noise function which is scaled by the position to achieve the different grass color effect. For the GRASS_TOP texture, a similar approach is used, but without the initial check on the grey texture color's sum.
+
+Procedurally placed assets
+
+In placeTree, I first determine the number of trees to place in a chunk, which is a random number up to 3. To avoid tree crowding, each new tree is at least 4 blocks away from any other tree, if not then the system will try a new point. The algorithm will try to place a tree up to 10 times in order to avoid a deadlock.
+
+Once the positions for tree placement is generated, then the code will iterate over these positions and construct trees only in plains biomes. Trees consist of a trunk which is 5 blocks high and leaves forming a canopy. The canopy is layered.
+
+Water waves
+
+In the vertex shader, I’ve implemented a basic wave movement for the water's surface. The y-coordinate of the water’s vertex position is modified to create a wave effect. This is achieved by applying a sine function that depends on both the block's position and a time variable. 
+
+In the fragment shader, the water surface normal is distorted. The exact value is calculated using partial derivative. This new normal is used to calculate the reflection of the light using Blinn-Phong shading and the angle of reflection. To make it look better, I also included a smooth transition between the reflected sunlight and the water's base color, which creates a glossy highlight effect on the water surface.
+
+Post-process Camera Overlay
+
+I added a ripple distortion using sin function. Then. with Worley noise, known for its cell-like patterns, I added a bubbly texture to the effect, simulating the appearance of light refracting through water. The final water effect is a blend of these ripples and bubbles, further tinted with a blue color to enhance the underwater feeling.
+
+Sobel for sharper Edge
+
+The Sobel filter is applied to the depth texture of the scene, enhancing the visual clarity and definition of edges. This is achieved by calculating the gradient of the depth information in both the x and y directions, and then combining these gradients to determine the edge strength. This edge enhancement makes the visual elements in the game more distinct and sharper, contributing to a more defined and stylized look.
+
+Better Terrain Generation
+
+Firstly, I improved the transition between plains and stone hills to make it smoother and more natural. This is achieved by blending stone and grass blocks in the boundary area, leveraging both randomness and deterministic noise functions. This avoids the abrupt changes over the boundary.
+
+Secondly, the stone hills themselves have been refined to better resemble natural hill formations. I used Worley noise combined with a sin function. The sin function ensures a smoother transition to the adjacent plains while the Worley noise ensure that it looks like hills.
+
+Regarding the river generation, instead of using an L-system, I opted for another approach. By lowering the terrain at the transition between mountains and hills, and subsequently filling these areas with water, I created river-like formations. This method is both efficient and visually effective, resulting in river valleys that naturally blend with the surrounding terrain.
