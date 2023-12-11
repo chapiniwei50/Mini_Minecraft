@@ -39,6 +39,8 @@ public:
     int unifDimensions;
     int unifEye;
 
+    int unifScreenSize;
+
 public:
     ShaderProgram(OpenGLContext* context);
     // Sets up the requisite GL data and shaders from the given .glsl files
@@ -75,6 +77,7 @@ public:
     void setCameraPosition(const glm::vec3 &camPos);
 
     void setLightDirection(const glm::vec3 &lightDirection);
+    void setScreenSize(const glm::vec2 &screenSize);
 
 private:
     OpenGLContext* context;   // Since Qt's OpenGL support is done through classes like QOpenGLFunctions_3_2_Core,

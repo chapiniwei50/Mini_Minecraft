@@ -429,7 +429,7 @@ void Terrain::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
             // Top block determination
             if (biome == BiomeType::PLAIN) {
                 setBlockAt(x, y, z, STONE);
-            } else if (biome == BiomeType::MOUNTAIN) {
+            } else if (biome == BiomeType::HILL) {
                 setBlockAt(x, y, z, STONE);
             } else if (biome == BiomeType::DESSERT){
                 setBlockAt(x, y, z, DIRT);
@@ -438,7 +438,7 @@ void Terrain::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
             // Filling other blocks
             if (biome == BiomeType::PLAIN) {
                 setBlockAt(x, y, z, DIRT);
-            } else if (biome == BiomeType::MOUNTAIN) {
+            } else if (biome == BiomeType::HILL) {
                 setBlockAt(x, y, z, STONE);
             } else if (biome == BiomeType::DESSERT){
                 setBlockAt(x, y, z, DIRT);
@@ -491,7 +491,7 @@ void Terrain::getHeight(int x, int z, int& y, BiomeType& b) {
         b = BiomeType::DESSERT;
     } else if (biomeNoiseValue > 0.75) { // Mountains
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 15;
-        b = BiomeType::MOUNTAIN;
+        b = BiomeType::HILL;
     } else { // Transition between Plains and Desert
         float plainsHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 30 + 10;
         float desertHeight = PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 40 + 5;

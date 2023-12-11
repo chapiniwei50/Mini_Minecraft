@@ -49,8 +49,13 @@ void main()
         distortedUV += ripple * distortionAmount;
         vec3 original = texture(u_RenderedTexture, distortedUV).rgb;
 
+        float bubble = WorleyNoise(fs_UV * 2.0 - vec2(time * 0.05, time * 0.05));
+        bubble = smoothstep(0.1, 0.2, bubble);
+
+        vec3 bubbleColor = mix(vec3(1.0, 1.0, 1.0), original, bubble);
+
         vec3 blueTint = vec3(0.0, 0.0, 1.0);
-        out_Col = vec4(mix(original, blueTint, 0.5), 1.0);
+        out_Col = vec4(mix(bubbleColor, blueTint, 0.2), 1.0);
         return;
 
     } else if(u_EffectType == 2){

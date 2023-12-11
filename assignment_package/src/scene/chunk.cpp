@@ -136,6 +136,8 @@ void Chunk::createVBOdata()
                         uv[2] = 1.0;
                     if (t == LAVA)  // LAVA
                         uv[2] = 0.5;
+                    if (t == GRASS)  // GRASSSIDE
+                        uv[2] = 0.3;
 
                     data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(-1.0, 0.0, 0.0, 0.0));
@@ -162,6 +164,8 @@ void Chunk::createVBOdata()
                         uv[2] = 1.0;
                     if (t == LAVA)  // LAVA
                         uv[2] = 0.5;
+                    if (t == GRASS)  // GRASSSIDE
+                        uv[2] = 0.3;
 
                     data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(1.0, 0.0, 0.0, 0.0));
@@ -214,6 +218,8 @@ void Chunk::createVBOdata()
                         uv[2] = 1.0;
                     if (t == LAVA)  // LAVA
                         uv[2] = 0.5;
+                    if (t == GRASS)  // GRASSTOP
+                        uv[2] = 0.2;
 
                     data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(0.0, 1.0, 0.0, 0.0));
@@ -240,6 +246,8 @@ void Chunk::createVBOdata()
                         uv[2] = 1.0;
                     if (t == LAVA)  // LAVA
                         uv[2] = 0.5;
+                    if (t == GRASS)  // GRASSSIDE
+                        uv[2] = 0.3;
 
                     data_to_push.push_back(glm::vec4(0.0 + x + minX, 1.0 + y, 0.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(0.0, 0.0, -1.0, 0.0));
@@ -266,6 +274,8 @@ void Chunk::createVBOdata()
                         uv[2] = 1.0;
                     if (t == LAVA)  // LAVA
                         uv[2] = 0.5;
+                    if (t == GRASS)  // GRASSSIDE
+                        uv[2] = 0.3;
 
                     data_to_push.push_back(glm::vec4(1.0 + x + minX, 1.0 + y, 1.0 + z + minZ, 1.0));
                     data_to_push.push_back(glm::vec4(0.0, 0.0, 1.0, 0.0));
@@ -353,6 +363,8 @@ void Chunk::createChunkBlockData(){
     }
 
     placeTree(heights, biomes);
+
+
 
 }
 
@@ -444,10 +456,12 @@ void Chunk::fillTerrainBlocks(int x, int z, BiomeType biome, int height) {
                 }
                 break;
 
-            case BiomeType::MOUNTAIN:
+            case BiomeType::HILL:
                 if (y == height) {
+                    setBlockAt(x, y, z, GRASS);
+                } else if (height - y < 4) {
                     setBlockAt(x, y, z, DIRT);
-                } else {
+                }else {
                     setBlockAt(x, y, z, STONE);
                 }
                 break;
@@ -529,7 +543,7 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
     const float desertStart = 0.5;
     const float desertEnd = 0.8;
     const float mountainStart = 0.9;
-    const float mountainEnd = 1.2;
+    const float mountainEnd = 20;
 
     float biomeNoiseValue = PerlinNoise2D(x * biomeScale, z * biomeScale, 1.0f, 2) * 2 + 0.5;
 
@@ -556,6 +570,8 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
     }
     else if (biomeNoiseValue >= desertStart && biomeNoiseValue <= desertEnd) { // Desert
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 20 + 5;
+        float des = (biomeNoiseValue - desertStart) / (desertEnd - desertStart);
+        height += sin(des * 3.14) * WorleyNoise(x * terrainScale * 0.2, z * terrainScale * 0.2) * 40;
         b = BiomeType::DESSERT;
     }
     else if (biomeNoiseValue >= desertEnd && biomeNoiseValue <= mountainStart) { // Dessert and Mountains
@@ -570,7 +586,7 @@ void Chunk::getHeight(int x, int z, int& y, BiomeType& b) {
     }
     else if (biomeNoiseValue >= mountainStart && biomeNoiseValue <= mountainEnd) { // Mountains
         height += PerlinNoise2D(x * terrainScale, z * terrainScale, 1.0f, 4) * 80 + 10;
-        b = BiomeType::MOUNTAIN;
+        b = BiomeType::HILL;
     }
     else{
         height -= 50;

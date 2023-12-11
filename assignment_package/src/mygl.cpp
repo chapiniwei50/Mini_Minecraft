@@ -126,6 +126,7 @@ void MyGL::resizeGL(int w, int h) {
 
     m_progLambert.setViewProjMatrix(viewproj);
     m_progFlat.setViewProjMatrix(viewproj);
+    m_progFlat.setScreenSize(glm::vec2(width(),height()));
 
     m_progSky.setViewProjMatrix(glm::inverse(viewproj));
     m_progSky.useMe();
@@ -173,7 +174,7 @@ void MyGL::sendPlayerDataToGUI() const {
 // so paintGL() called at a rate of 60 frames per second.
 void MyGL::paintGL() {
     // Clear the screen so that we only see newly drawn images
-    //renderDepthView();
+    renderDepthView();
 
     renderShadowMappingDepth();
     //renderSkybox();
@@ -219,7 +220,7 @@ void MyGL::renderTerrain() {
     glCullFace(GL_BACK);
 
     m_progFlat.useMe();
-
+    m_progFlat.setScreenSize(glm::vec2(width(),height()));
     m_progFlat.setLightSpaceMatrix(LightSpaceMatrix);
     // activate shadow mapping depth texture
     glActiveTexture(GL_TEXTURE0 + 2);
