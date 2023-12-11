@@ -105,3 +105,8 @@ Firstly, I improved the transition between plains and stone hills to make it smo
 Secondly, the stone hills themselves have been refined to better resemble natural hill formations. I used Worley noise combined with a sin function. The sin function ensures a smoother transition to the adjacent plains while the Worley noise ensure that it looks like hills.
 
 Regarding the river generation, instead of using an L-system, I opted for another approach. By lowering the terrain at the transition between mountains and hills, and subsequently filling these areas with water, I created river-like formations. This method is both efficient and visually effective, resulting in river valleys that naturally blend with the surrounding terrain.
+
+Cindy:
+
+Day and night cycle: I created sky.frag.glsl and sky.vert.glsl to render the sky. I modified the code provided from the professor by changing the sky’s position based on the time.  I used the quad I created for milestone 2 but instead I put spherical uvs on the quad so the sky would be rendered as a sphere around the camera. I used the Worley noise and fbm function to create the cloud that scatters and moves in the sky. I added the function rotateX in sky.frag.glsl for the rotation of the sun’s position.
+
