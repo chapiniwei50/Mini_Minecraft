@@ -11,7 +11,7 @@ uniform vec3 u_CameraPos; // Camera pos
 
 uniform int u_Time;
 
-out vec3 outColor;
+out vec4 out_Col;
 
 const float PI = 3.14159265359;
 const float TWO_PI = 6.28318530718;
@@ -23,11 +23,22 @@ const vec3 sunset[5] = vec3[](vec3(255, 229, 119) / 255.0,
                                vec3(253, 96, 81) / 255.0,
                                vec3(57, 32, 51) / 255.0);
 // Dusk palette
-const vec3 dusk[5] = vec3[](vec3(144, 96, 144) / 255.0,
-                            vec3(96, 72, 120) / 255.0,
-                            vec3(72, 48, 120) / 255.0,
-                            vec3(48, 24, 96) / 255.0,
-                            vec3(0, 24, 72) / 255.0);
+const vec3 dusk[5] = vec3[](
+         vec3(135, 206, 235) / 255.0,
+        vec3(0, 191, 255) / 255.0,    // Deep Sky Blue
+         vec3(30, 144, 255) / 255.0,   // Dodger Blue
+        vec3(70, 130, 180) / 255.0,   // Steel Blue
+        vec3(100, 149, 237) / 255.0 // Cornflower Blue
+
+
+
+       );  // Light Sky Blue
+// Sky blue palette
+
+
+
+
+
 
 const vec3 sunColor = vec3(255, 255, 190) / 255.0;
 const vec3 cloudColor = sunset[3];
@@ -79,6 +90,7 @@ vec3 uvToDusk(vec2 uv) {
     return dusk[4];
 }
 
+
 vec2 random2( vec2 p ) {
     return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
 }
@@ -111,7 +123,7 @@ float WorleyNoise3D(vec3 p)
                 vec3 point = random3(pointInt + neighbor);
 
                 // Animate the point
-                point = 0.5 + 0.5 * sin(u_Time * 0.01 + 6.2831 * point); // 0 to 1 range
+                point = 0.5 + 0.5 * sin(u_Time * 0.000001 + 6.2831 * point); // 0 to 1 range
 
                 // Compute the distance b/t the point and the fragment
                 // Store the min dist thus far
@@ -167,14 +179,19 @@ float worleyFBM(vec3 uv) {
     return sum;
 }
 
-//#define RAY_AS_COLOR
-//#define SPHERE_UV_AS_COLOR
+vec4 rotateX(vec3 p, float a) {
+    return vec4(p.x, cos(a) * p.y + -sin(a) *p.z, sin(a) * p.y + cos(a) * p.z, 0.0);
+}
+
+
+
 #define WORLEY_OFFSET
 
 void main()
 {
 
     vec2 ndc = (gl_FragCoord.xy / vec2(u_Dimensions)) * 2.0 - 1.0; // -1 to 1 NDC
+
 
    //    outColor = vec3(ndc * 0.5 + 0.5, 1);
 
@@ -185,13 +202,13 @@ void main()
        vec3 rayDir = normalize(p.xyz - u_CameraPos);
 
    #ifdef RAY_AS_COLOR
-       outColor = 0.5 * (rayDir + vec3(1,1,1));
+       out_Col = 0.5 * (rayDir + vec3(1,1,1));
        return;
    #endif
 
        vec2 uv = sphereToUV(rayDir);
    #ifdef SPHERE_UV_AS_COLOR
-       outColor = vec3(uv, 0);
+       out_Col = vec3(uv, 0);
        return;
    #endif
 
@@ -209,43 +226,35 @@ void main()
        vec3 sunsetColor = uvToSunset(uv + offset * 0.1);
        vec3 duskColor = uvToDusk(uv + offset * 0.1);
 
-       outColor = sunsetColor;
 
 
        // Add a glowing sun in the sky
-       vec3 sunDir = normalize(vec3(0, 0.1, 1.0));
+       vec3 sunDir = normalize(vec3(rotateX(normalize(vec3(0, 0, -1.f)), u_Time * 0.01)));
        float sunSize = 30;
        float angle = acos(dot(rayDir, sunDir)) * 360.0 / PI;
-       // If the angle between our ray dir and vector to center of sun
-       // is less than the threshold, then we're looking at the sun
-       if(angle < sunSize) {
-           // Full center of sun
-           if(angle < 7.5) {
-               outColor = sunColor;
+       float raySunDot = dot(rayDir, sunDir);
+#define SUNSET_THRESHOLD 0.375
+#define DUSK_THRESHOLD -0.3
+#define HIGH_NOON_THRESHOLD 0.8
+#define EVENING_THRESHOLD 0.3
+
+       float ratio = (raySunDot - SUNSET_THRESHOLD) / (DUSK_THRESHOLD - SUNSET_THRESHOLD);
+
+
+       if (raySunDot > DUSK_THRESHOLD) {
+
+           if (angle < sunSize) {
+               if (angle < 10) {
+                   out_Col = vec4(sunColor, 1);
+               } else {
+                   out_Col = vec4(mix(sunColor, mix(sunsetColor, duskColor, 1-ratio), (angle - 7.5) / 22.5), 1);
+               }
+           } else {
+
+               out_Col= vec4(mix(sunsetColor, duskColor, 1-ratio), 1);
            }
-           // Corona of sun, mix with sky color
-           else {
-               outColor = mix(sunColor, sunsetColor, (angle - 7.5) / 22.5);
-           }
-       }
-       // Otherwise our ray is looking into just the sky
-       else {
-           float raySunDot = dot(rayDir, sunDir);
-   #define SUNSET_THRESHOLD 0.75
-   #define DUSK_THRESHOLD -0.1
-           if(raySunDot > SUNSET_THRESHOLD) {
-               // Do nothing, sky is already correct color
-           }
-           // Any dot product between 0.75 and -0.1 is a LERP b/t sunset and dusk color
-           else if(raySunDot > DUSK_THRESHOLD) {
-               float t = (raySunDot - SUNSET_THRESHOLD) / (DUSK_THRESHOLD - SUNSET_THRESHOLD);
-               outColor = mix(outColor, duskColor, t);
-           }
-           // Any dot product <= -0.1 are pure dusk color
-           else {
-               outColor = duskColor;
-           }
+       } else {
+           out_Col = vec4(mix(sunsetColor, duskColor, 1-ratio), 1);
        }
 
-    //outColor = vec3(1.0,1.0,1.0);
 }
