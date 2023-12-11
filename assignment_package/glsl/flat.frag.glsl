@@ -260,7 +260,7 @@ void main()
     float max_ambient = 0.7;
     float min_ambient = 0.3;
     float max_ambient_threshold = 0.8;
-    float min_ambient_threshold = 0.12;
+    float min_ambient_threshold = 0.06;
     if (day_time_value > max_ambient_threshold)
         ambientTerm = max_ambient;
     else if (day_time_value < min_ambient_threshold)
@@ -273,12 +273,12 @@ void main()
     // if day_time_value > 0.1, diffuseTerm should be the largest
     float min_diffuseTerm_factor = 0.2;
     float max_diffuseTerm_factor = 1.0;
-    if (day_time_value < 0.12)
+    if (day_time_value < 0.06)
         diffuseTerm *= min_diffuseTerm_factor;  // if at night, the diffuse term value should also be smaller
     else if (day_time_value > 0.2)
         diffuseTerm *= max_diffuseTerm_factor;
     else
-        diffuseTerm *= mix(min_diffuseTerm_factor, max_diffuseTerm_factor, (day_time_value - 0.12) / 0.08);
+        diffuseTerm *= mix(min_diffuseTerm_factor, max_diffuseTerm_factor, (day_time_value - 0.06) / 0.14);
 
     float lightIntensity = clamp(ambientTerm + diffuseTerm, 0, 1);
 
