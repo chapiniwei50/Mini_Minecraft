@@ -134,6 +134,6 @@ public:
     void create_load_texture(const char *textureFile);
 
     // Visible distance
-    const int zoneRadius = 4;
+    const int zoneRadius = 5;
 
 };
