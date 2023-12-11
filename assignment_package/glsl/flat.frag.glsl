@@ -211,13 +211,12 @@ void main()
     {
         vec4 greyTextureColor = texture(u_Texture, fs_UV.xy);
         float colorSum = greyTextureColor.r + greyTextureColor.g + greyTextureColor.b;
-        if (colorSum < 0.1) {
+        if (colorSum < 2.0) {
             diffuseColor = greyTextureColor;
         } else {
             vec2 inputvec2 = vec2(fs_Pos.x,fs_Pos.z);
             float noiseValue = perlinNoise(inputvec2 * 0.01) + 0.5;
             vec3 baseColor = getBaseColor(noiseValue);
-            vec4 greyTextureColor = texture(u_Texture, fs_UV.xy);
             diffuseColor = vec4(greyTextureColor.rgb * baseColor, greyTextureColor.a);
         }
     }
