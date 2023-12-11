@@ -87,6 +87,9 @@ void ShaderProgram::create(const char *vertfile, const char *fragfile)
     unifTime = context->glGetUniformLocation(prog, "u_Time");
     unifCameraPos = context->glGetUniformLocation(prog, "u_CameraPos");
 
+    unifDimensions = context->glGetUniformLocation(prog, "u_Dimensions");
+    unifEye = context->glGetUniformLocation(prog, "u_Eye");
+
     context->printGLErrorLog();
 }
 
@@ -369,6 +372,15 @@ void ShaderProgram::drawEffect(Drawable &d){
 
     useMe();
 
+    // Each of the following blocks checks that:
+    //   * This shader has this attribute, and
+    //   * This Drawable has a vertex buffer for this attribute.
+    // If so, it binds the appropriate buffers to each attribute.
+
+    // Remember, by calling bindPos(), we call
+    // glBindBuffer on the Drawable's VBO for vertex position,
+    // meaning that glVertexAttribPointer associates vs_Pos
+    // (referred to by attrPos) with that VBO
     if(d.elemOpqCount() < 0) {
         throw std::out_of_range("Attempting to draw a drawable with m_count of " + std::to_string(d.elemOpqCount()) + "!");
     }
@@ -392,3 +404,17 @@ void ShaderProgram::drawEffect(Drawable &d){
     context->printGLErrorLog();
 }
 
+void ShaderProgram::drawSkybox(Drawable &d){
+    useMe();
+
+    if (attrPos != -1 && d.bindPos()) {
+        context->glEnableVertexAttribArray(attrPos);
+        context->glVertexAttribPointer(attrPos, 4, GL_FLOAT, false, 0, NULL);
+    }
+
+    d.bindIdxOpq();
+    context->glDrawElements(d.drawMode(), d.elemOpqCount(), GL_UNSIGNED_INT, 0);
+    if (attrPos != -1) context->glDisableVertexAttribArray(attrPos);
+
+    context->printGLErrorLog();
+}

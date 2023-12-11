@@ -23,7 +23,7 @@ struct EnumHash {
 
 enum BlockType : unsigned char
 {
-    EMPTY, GRASS, DIRT, STONE, WATER, LAVA
+    EMPTY, GRASS, DIRT, STONE, WATER, LAVA, TRUNK, LEAF
 };
 
 // The six cardinal directions in 3D space
@@ -83,5 +83,19 @@ const static std::unordered_map<BlockType, std::unordered_map<Direction, glm::ve
            {YPOS, glm::vec2(14 * GRID, 0 * GRID)},
            {YNEG, glm::vec2(14 * GRID, 0 * GRID)},
            {ZPOS, glm::vec2(14 * GRID, 0 * GRID)},
-           {ZNEG, glm::vec2(14 * GRID, 0 * GRID)}}}
+           {ZNEG, glm::vec2(14 * GRID, 0 * GRID)}}},
+    {TRUNK, std::unordered_map<Direction, glm::vec2, EnumHash>{
+                                                              {XPOS, glm::vec2(4 * GRID, 14 * GRID)},
+                                                              {XNEG, glm::vec2(4 * GRID, 14 * GRID)},
+                                                              {YPOS, glm::vec2(5 * GRID, 14 * GRID)},
+                                                              {YNEG, glm::vec2(5 * GRID, 14 * GRID)},
+                                                              {ZPOS, glm::vec2(4 * GRID, 14 * GRID)},
+                                                              {ZNEG, glm::vec2(4 * GRID, 14 * GRID)}}},
+    {LEAF, std::unordered_map<Direction, glm::vec2, EnumHash>{
+                                                              {XPOS, glm::vec2(5 * GRID, 12 * GRID)},
+                                                              {XNEG, glm::vec2(5 * GRID, 12 * GRID)},
+                                                              {YPOS, glm::vec2(5 * GRID, 12 * GRID)},
+                                                              {YNEG, glm::vec2(5 * GRID, 12 * GRID)},
+                                                              {ZPOS, glm::vec2(5 * GRID, 12 * GRID)},
+                                                              {ZNEG, glm::vec2(5 * GRID, 12 * GRID)}}}
 };
