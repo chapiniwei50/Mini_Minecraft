@@ -75,15 +75,24 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     // the shadow intensity should be 0 if day_time_value < 0.12
     // should be the largest when day_time_value >= 0.2
     // but should be 0 if at noon
-    float start_shadow_point = 0.05; //0.12;
+    float start_shadow_point = 0.06; //0.12;
     float end_shadow_point = 0.2;
     float intensity_factor;
     if (day_time_value < start_shadow_point)
         intensity_factor = 0.f;
-    else if (day_time_value > end_shadow_point && day_time_value < 0.95)
+//    else if (day_time_value > end_shadow_point && day_time_value < 0.95)
+//        intensity_factor = 1.f;
+//    else if (day_time_value > 0.95)
+//        intensity_factor = mix(1, 0, (day_time_value - 0.95) / 0.05);
+    else if (day_time_value > end_shadow_point) {
         intensity_factor = 1.f;
-    else if (day_time_value > 0.95)
-        intensity_factor = mix(1, 0, (day_time_value - 0.95) / 0.05);
+        if (abs(dot(fs_Nor, vec3(0, 1, 0))) < 0.0001) {  // for vertical plane
+            if (day_time_value > 0.95 && day_time_value < 0.99)  // when sunlight is vertical)
+                intensity_factor = mix(1, 0, (day_time_value - 0.95) / 0.04);
+            else if (day_time_value >= 0.99)
+                intensity_factor = 0.f;
+        }
+    }
     else
         intensity_factor = mix(0, 1, (day_time_value - start_shadow_point) / (end_shadow_point - start_shadow_point));
 
