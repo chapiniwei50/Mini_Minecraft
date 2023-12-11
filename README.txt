@@ -106,6 +106,10 @@ Secondly, the stone hills themselves have been refined to better resemble natura
 
 Regarding the river generation, instead of using an L-system, I opted for another approach. By lowering the terrain at the transition between mountains and hills, and subsequently filling these areas with water, I created river-like formations. This method is both efficient and visually effective, resulting in river valleys that naturally blend with the surrounding terrain.
 
+Distance Fog:
+
+In the shader code, the fog effect is calculated based on the distance between the camera position and the position of the fragment being processed. Then, a fogFactor is calculated using a linear interpolation formula. Finally, a mix function blends the original color of the fragment with the fog color based on the fogFactor.
+
 Cindy:
 
 Day and night cycle: I created sky.frag.glsl and sky.vert.glsl to render the sky. I modified the code provided from the professor by changing the sky’s position based on the time.  I used the quad I created for milestone 2 but instead I put spherical uvs on the quad so the sky would be rendered as a sphere around the camera. I used the Worley noise and fbm function to create the cloud that scatters and moves in the sky. I added the function rotateX in sky.frag.glsl for the rotation of the sun’s position.
