@@ -1,5 +1,8 @@
 # Mini Minecraft Project
 
+## Demo
+https://www.youtube.com/watch?v=u2c4my5wR0Q
+
 ## Description
 This project is a simplified version of Minecraft implemented using C++ and OpenGL. The game features terrain generation, player controls, block manipulation, biomes, day and night cycles, and post-processing effects. It leverages procedural generation, multithreaded terrain rendering, and basic physics for an immersive experience. The project was developed as a collaborative effort, with contributions focusing on terrain creation, chunk rendering, player input handling, and visual effects.
 
